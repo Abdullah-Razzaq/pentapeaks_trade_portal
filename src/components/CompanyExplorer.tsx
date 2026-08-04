@@ -1,0 +1,912 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
+
+import { generateClientExcel } from "../lib/generateExcel";
+import Combobox from "./Combobox";
+import { UserExportToolbar } from "./UserExportToolbar";
+import { getStandardUserFilename } from "../lib/exportUtils";
+import { useUserQuota } from "../hooks/useUserQuota";
+
+type Row = {
+  id: number;
+  company: string;
+  ntn?: string | null;
+  country: string | null;
+  counterparty?: string;
+  pct?: number | string | null;
+  qty?: number | null;
+  unit?: string | null;
+  description: string;
+  value_pkr: number;
+  shipment_date: string | null;
+};
+
+type ProductStatus = {
+  chapter: string;
+  label: string;
+  shipments: number;
+  buyers: number;
+  suppliers: number;
+  countriesServed: number;
+  totalValuePkr: number;
+  firstShipment: string | null;
+  lastShipment: string | null;
+  topBuyers: { company: string; shipments: number; total_value_pkr: number }[];
+  topSuppliers: { company: string; shipments: number; total_value_pkr: number }[];
+  topCountries: { country: string; shipments: number; total_value_pkr: number }[];
+};
+
+type Mode = "buyer" | "supplier";
+type SortOrder = "value_desc" | "value_asc" | "az" | "za";
+
+const currencyFormatter = new Intl.NumberFormat("en-PK", {
+  maximumFractionDigits: 0,
+});
+
+const numberFormatter = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 2,
+});
+
+function formatDate(value: string | null): string {
+  if (!value) return "—";
+  return new Date(value).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function StatCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-orange-100 bg-orange-50/50 px-4 py-3 print:border-gray-300 print:bg-white">
+      <p className="text-xs font-medium uppercase tracking-wide text-orange-600 print:text-gray-800">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-gray-900">{value}</p>
+    </div>
+  );
+}
+
+export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRole?: string }) {
+  const { subscriptionExpiresAt, refreshQuota } = useUserQuota();
+  const [query, setQuery] = useState("");
+  const [product, setProduct] = useState("");
+  const [destinationCountry, setDestinationCountry] = useState("");
+  const [sort, setSort] = useState<SortOrder>("value_desc");
+  const [page, setPage] = useState(1);
+  const limit = 50;
+  
+  const [rows, setRows] = useState<Row[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [primary, setPrimary] = useState("");
+  const [secondary, setSecondary] = useState("");
+  const [tertiary, setTertiary] = useState("");
+  const [primaryOptions, setPrimaryOptions] = useState<string[]>([]);
+  const [secondaryOptions, setSecondaryOptions] = useState<string[]>([]);
+  const [tertiaryOptions, setTertiaryOptions] = useState<string[]>([]);
+  const [hsCodeFilter, setHsCodeFilter] = useState("");
+  const [selectedRow, setSelectedRow] = useState<Row | null>(null);
+
+  const [status, setStatus] = useState<ProductStatus | null>(null);
+  const [statusLoading, setStatusLoading] = useState(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const [availableCountries, setAvailableCountries] = useState<string[]>([]);
+
+  const endpoint = mode === "buyer" ? "/api/trade/buyers" : "/api/trade/suppliers";
+
+  const load = useCallback(
+    async (companyTerm: string, productTerm: string, countryTerm: string, hsCodeTerm: string, sortOrder: SortOrder, pageNum: number) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const params = new URLSearchParams();
+        if (companyTerm) params.set("company", companyTerm);
+        if (productTerm) params.set("product", productTerm);
+        if (countryTerm) params.set("destination_country", countryTerm);
+        if (hsCodeTerm) params.set("hs_code", hsCodeTerm);
+        params.set("sort", sortOrder);
+        params.set("page", pageNum.toString());
+        
+        const res = await fetch(`${endpoint}?${params.toString()}`);
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error("API Error Response:", errorText);
+          throw new Error(`Server returned ${res.status}: ${res.statusText}`);
+        }
+        const data = await res.json();
+        setRows(data.results as Row[]);
+        setTotal(data.total as number);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load data.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [endpoint]
+  );
+
+  useEffect(() => {
+    const handle = setTimeout(() => load(query, product, destinationCountry, hsCodeFilter, sort, page), 300);
+    return () => clearTimeout(handle);
+  }, [query, product, destinationCountry, hsCodeFilter, sort, page, load]);
+
+  // Avoid resetting page in useEffect to prevent cascading renders
+  // We'll reset it directly in the input onChange handlers
+
+
+  // Cascading options
+  useEffect(() => {
+    fetch(`/api/products/categories?level=2`)
+      .then(res => res.json())
+      .then(data => setPrimaryOptions(data.categories || []))
+      .catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    if (primary) {
+      fetch(`/api/products/categories?level=4&parent=${encodeURIComponent(primary)}`)
+        .then(res => res.json())
+        .then(data => setSecondaryOptions(data.categories || []))
+        .catch(console.error);
+    }
+  }, [primary]);
+
+  useEffect(() => {
+    if (secondary) {
+      fetch(`/api/products/categories?level=6&parent=${encodeURIComponent(secondary)}`)
+        .then(res => res.json())
+        .then(data => setTertiaryOptions(data.categories || []))
+        .catch(console.error);
+    }
+  }, [secondary]);
+
+  useEffect(() => {
+    fetch("/api/trade/countries")
+      .then((res) => res.json())
+      .then((data) => setAvailableCountries(data.countries || []))
+      .catch(console.error);
+  }, [userRole]);
+
+  async function checkStatus() {
+    let hsPrefix = "";
+    if (tertiary) hsPrefix = tertiary.split(" ")[0];
+    else if (secondary) hsPrefix = secondary.split(" ")[0];
+    else if (primary) hsPrefix = primary.split(" ")[0];
+
+    if (!hsPrefix) return;
+    
+    // Set filter for the grid below
+    setHsCodeFilter(hsPrefix);
+    setPage(1); // reset pagination
+    
+    setStatusLoading(true);
+    setStatusError(null);
+    try {
+      const res = await fetch(`/api/trade/product-status?hs_code=${hsPrefix}`);
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("API Error Response:", errorText);
+        throw new Error(`Server returned ${res.status}: ${res.statusText}`);
+      }
+      const data = await res.json();
+      setStatus(data as ProductStatus);
+    } catch (err) {
+      setStatusError(err instanceof Error ? err.message : "Failed to load product status.");
+      setStatus(null);
+    } finally {
+      setStatusLoading(false);
+    }
+  }
+
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
+  const [exportStartPage, setExportStartPage] = useState<number | "">(1);
+  const [exportEndPage, setExportEndPage] = useState<number | "">(1);
+
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+  const handleResetToInitialState = () => {
+    // 1. Reset Product Status dropdowns and data
+    setPrimary('');
+    setSecondary('');
+    setTertiary('');
+    setStatus(null);
+  
+    // 2. Clear applied HS code search filter on the page
+    setQuery('');
+    setHsCodeFilter('');
+    setDestinationCountry('');
+  
+    // 3. Re-fetch main table back to initial page load state
+    setPage(1);
+  };
+
+  const toggleExpand = (id: string | number) => {
+    setExpandedRows(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handleExport = async (format: "pdf" | "excel", specificPage?: number) => {
+    setDownloadError(null);
+    if (format === "pdf") setIsExportingPdf(true);
+    else setIsExportingExcel(true);
+    try {
+      const params = new URLSearchParams({
+        company: query,
+        product: product,
+        destination_country: destinationCountry,
+        hs_code: hsCodeFilter,
+        format: format,
+      });
+      
+      let allRows: string[][] = [];
+      let headers: string[] = [];
+      
+      if (userRole === "admin") {
+        const start = typeof exportStartPage === "number" ? exportStartPage : 1;
+        const end = typeof exportEndPage === "number" ? exportEndPage : 1;
+
+        if (start < 1) {
+          throw new Error("Start page must be at least 1.");
+        }
+        if (end < start) {
+          throw new Error("End page must be greater than or equal to start page.");
+        }
+        if (end - start + 1 > 20) {
+          throw new Error("You can download a maximum of 20 pages at a time. Please select a smaller page range (e.g., Page 1 to 20).");
+        }
+        
+        params.set("startPage", start.toString());
+        params.set("endPage", end.toString());
+        params.set("intent", "download");
+        const res = await fetch(`/api/export?${params.toString()}`, { cache: "no-store" });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || `Failed to download ${format.toUpperCase()}`);
+        }
+        const data = await res.json();
+        allRows = data.data;
+        headers = data.headers;
+      } else {
+        const pageToFetch = typeof specificPage === "number" ? specificPage : 1;
+        if (pageToFetch < 1 || pageToFetch > (totalPages || 1)) {
+          throw new Error(`Please enter a valid page number between 1 and ${totalPages || 1}`);
+        }
+        params.set("page", pageToFetch.toString());
+        params.set("intent", "download");
+        const res = await fetch(`/api/export?${params.toString()}`, { cache: "no-store" });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          const errorMsg = data.error || `Failed to download ${format.toUpperCase()}`;
+          setDownloadError(errorMsg);
+          
+          // Re-fetch quota immediately to lock UI toolbar if limit was reached
+          if (userRole !== "admin") {
+            await refreshQuota();
+          }
+          return;
+        }
+        const data = await res.json();
+        allRows = data.data;
+        headers = data.headers;
+      }
+      
+      // Admin might not have headers from the chunker, so let's default them if empty:
+      if (!headers || headers.length === 0) {
+        headers = ["Date", "Supplier", "NTN", "Buyer", "Destination", "HS Code", "Quantity", "Unit", "Description", "Value (PKR)"];
+      }
+
+      const filenamePrefix = mode === "buyer" ? "buyer_data" : "supplier_data";
+      
+      const dateStr = new Date().toISOString().split("T")[0];
+      const filename = `${filenamePrefix}_pages_${exportStartPage}_to_${exportEndPage}_${dateStr}`;
+      
+      let finalFilenameExcel = `${filename}.xlsx`;
+      let finalFilenamePdf = `${filename}.pdf`;
+
+      if (userRole !== "admin") {
+         const pageToFetch = typeof specificPage === "number" ? specificPage : 1;
+         finalFilenameExcel = getStandardUserFilename(mode === "buyer" ? "buyer" : "supplier", pageToFetch, "xlsx");
+         finalFilenamePdf = getStandardUserFilename(mode === "buyer" ? "buyer" : "supplier", pageToFetch, "pdf");
+      }
+      
+      if (format === "excel") {
+        generateClientExcel(allRows, headers, finalFilenameExcel);
+      } else {
+        const doc = new jsPDF({ orientation: "landscape" });
+        
+        doc.text("Pentapeaks Trade Portal - Export", 14, 15);
+        
+        if (allRows && allRows.length > 0) {
+          autoTable(doc, {
+            head: [headers],
+            body: allRows,
+            startY: 20,
+            styles: { fontSize: 7 },
+            headStyles: { fillColor: [30, 41, 59] }
+          });
+        } else {
+          doc.text("No shipments found.", 14, 25);
+        }
+        
+        doc.save(finalFilenamePdf);
+      }
+      if (userRole !== "admin") {
+        await refreshQuota();
+      }
+    } catch (err) {
+      setDownloadError(err instanceof Error ? err.message : "Error connecting to export service");
+    } finally {
+      setIsExportingPdf(false);
+      setIsExportingExcel(false);
+    }
+  };
+
+  const toggleSortValue = () => {
+    setSort(prev => prev === "value_desc" ? "value_asc" : "value_desc");
+  };
+
+  const topList = mode === "buyer" ? status?.topBuyers : status?.topSuppliers;
+  const topListLabel = mode === "buyer" ? "Top Buyers in This Category" : "Top Suppliers in This Category";
+  const totalPages = Math.ceil(total / limit);
+
+  return (
+    <div className="print-container">
+      <style dangerouslySetInnerHTML={{__html: `
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          .print-container, .print-container * {
+            visibility: visible;
+          }
+          .print-container {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+          .no-print {
+            display: none !important;
+          }
+          .print-header {
+            display: block !important;
+            margin-bottom: 20px;
+          }
+        }
+      `}} />
+
+      <div className="hidden print-header print:block text-center mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Pentapeaks Trade Portal</h1>
+        <p className="text-gray-500">
+          {mode === "buyer" ? "Buyer / Importer Report" : "Supplier / Exporter Report"}
+        </p>
+        <p className="text-sm text-gray-400">Generated on {new Date().toLocaleDateString()}</p>
+      </div>
+
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between no-print">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">
+            {mode === "buyer" ? "Find Buyer" : "Find Supplier"}
+          </h1>
+          <p className="mt-1 text-sm text-gray-500">
+            {mode === "buyer"
+              ? "Search individual shipment records to find importers who bought specific products."
+              : "Search individual shipment records to find exporters supplying specific products."}
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row items-end sm:items-center gap-4">
+
+          
+          {userRole === "admin" ? (
+            <div className="flex flex-col items-end mt-4 sm:mt-0">
+              <div className="flex flex-col sm:flex-row gap-4 items-center">
+              <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">
+                <span className="text-xs font-medium text-gray-700">Total Pages: {totalPages}</span>
+                <div className="h-4 w-px bg-gray-300 mx-1"></div>
+                <label htmlFor="exportStartPage" className="text-xs text-gray-500">From:</label>
+                <input 
+                  id="exportStartPage"
+                  type="number" 
+                  min={1}
+                  max={totalPages || 1}
+                  value={exportStartPage}
+                  onChange={(e) => setExportStartPage(e.target.value === "" ? "" : parseInt(e.target.value) || 1)}
+                  onBlur={() => {
+                    if (exportStartPage === "") setExportStartPage(1);
+                  }}
+                  disabled={isExportingPdf || isExportingExcel || totalPages === 0}
+                  className="w-14 text-sm border-gray-300 rounded px-1 py-0.5 focus:ring-emerald-500 focus:border-emerald-500 disabled:bg-gray-100 disabled:text-gray-400 text-gray-900 font-bold bg-white" 
+                />
+                <label htmlFor="exportEndPage" className="text-xs text-gray-500 ml-1">To:</label>
+                <input 
+                  id="exportEndPage"
+                  type="number" 
+                  min={1}
+                  max={totalPages || 1}
+                  value={exportEndPage}
+                  onChange={(e) => setExportEndPage(e.target.value === "" ? "" : parseInt(e.target.value) || 1)}
+                  onBlur={() => {
+                    if (exportEndPage === "") setExportEndPage(Math.min(20, totalPages || 1));
+                  }}
+                  disabled={isExportingPdf || isExportingExcel || totalPages === 0}
+                  className="w-14 text-sm border-gray-300 rounded px-1 py-0.5 focus:ring-emerald-500 focus:border-emerald-500 disabled:bg-gray-100 disabled:text-gray-400 text-gray-900 font-bold bg-white" 
+                />
+              </div>
+              <div className="flex gap-2">
+              <button
+                onClick={() => handleExport("pdf")}
+                disabled={isExportingPdf || isExportingExcel || totalPages === 0}
+                className="flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 disabled:opacity-70 disabled:cursor-wait"
+              >
+                {isExportingPdf ? `Generating PDF...` : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    Download PDF
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => handleExport("excel")}
+                disabled={isExportingPdf || isExportingExcel || totalPages === 0}
+                className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-70 disabled:cursor-wait"
+              >
+                {isExportingExcel ? `Generating Excel...` : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="17"></line><line x1="16" y1="13" x2="8" y2="17"></line></svg>
+                    Download Excel
+                  </>
+                )}
+              </button>
+              </div>
+              </div>
+              {downloadError && (
+                <div className="w-full mt-2 text-red-600 bg-red-50 border border-red-200 text-xs px-2 py-1 rounded text-right">
+                  {downloadError}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col items-end mt-4 sm:mt-0">
+              <UserExportToolbar 
+                totalPages={totalPages || 1}
+                subscriptionExpiresAt={subscriptionExpiresAt}
+                onDownloadPdf={async (pageNo) => {
+                  await handleExport("pdf", pageNo);
+                }}
+              />
+              {downloadError && (
+                <div className="w-full mt-2 text-red-600 bg-red-50 border border-red-200 text-xs px-2 py-1 rounded text-right">
+                  {downloadError}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row no-print">
+        <input
+          value={query}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setPage(1);
+          }}
+          placeholder="Filter by company name..."
+          className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100 sm:w-64"
+        />
+        <input
+          value={product}
+          onChange={(event) => {
+            setProduct(event.target.value);
+            setPage(1);
+          }}
+          placeholder="Filter by product / description..."
+          className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100 sm:w-72"
+        />
+        <Combobox
+          value={destinationCountry}
+          onChange={(val) => {
+            setDestinationCountry(val);
+            setPage(1);
+          }}
+          options={availableCountries}
+          placeholder="Filter by destination country..."
+          className="w-full sm:w-64"
+        />
+        <select
+          value={sort}
+          onChange={(event) => {
+            setSort(event.target.value as SortOrder);
+            setPage(1);
+          }}
+          title="Sort by"
+          className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100 sm:w-48"
+        >
+          <option value="value_desc">Sort: Value (Highest)</option>
+          <option value="value_asc">Sort: Value (Lowest)</option>
+          <option value="az">Sort: Name (A → Z)</option>
+          <option value="za">Sort: Name (Z → A)</option>
+        </select>
+      </div>
+
+      <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm no-print">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-orange-600">
+            Check Product Status
+          </h2>
+          <button
+            type="button"
+            onClick={handleResetToInitialState}
+            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all cursor-pointer"
+            title="Close & Remove Product Status"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div className="flex-1 min-w-[200px]">
+            <label className="mb-1 block text-xs font-medium text-gray-700">Primary Category</label>
+            <Combobox
+              value={primary}
+              onChange={(val) => {
+                setPrimary(val);
+                setSecondary("");
+                setTertiary("");
+                setSecondaryOptions([]);
+                setTertiaryOptions([]);
+              }}
+              options={primaryOptions}
+              placeholder="Search primary category..."
+            />
+          </div>
+          <div className="flex-1 min-w-[200px]">
+            <label className="mb-1 block text-xs font-medium text-gray-700">Secondary Category</label>
+            <Combobox
+              value={secondary}
+              onChange={(val) => {
+                setSecondary(val);
+                setTertiary("");
+                setTertiaryOptions([]);
+              }}
+              options={secondaryOptions}
+              placeholder="Search secondary category..."
+            />
+          </div>
+          <div className="flex-1 min-w-[200px]">
+            <label className="mb-1 block text-xs font-medium text-gray-700">Tertiary Category</label>
+            <Combobox
+              value={tertiary}
+              onChange={setTertiary}
+              options={tertiaryOptions}
+              placeholder="Search tertiary category..."
+            />
+          </div>
+          <button
+            onClick={checkStatus}
+            disabled={!primary || statusLoading}
+            className="rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60 h-[42px]"
+          >
+            {statusLoading ? "Checking..." : "Check Status"}
+          </button>
+        </div>
+
+        {statusError && (
+          <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{statusError}</p>
+        )}
+
+        {status && !statusError && (
+          <div className="mt-5">
+            <h3 className="text-base font-semibold text-gray-900">{status.label}</h3>
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <StatCard label="Shipments" value={status.shipments.toLocaleString()} />
+              <StatCard label="Buyers" value={status.buyers.toLocaleString()} />
+              <StatCard label="Suppliers" value={status.suppliers.toLocaleString()} />
+              <StatCard label="Countries" value={status.countriesServed.toLocaleString()} />
+              <StatCard label="Total Value (PKR)" value={currencyFormatter.format(status.totalValuePkr)} />
+              <StatCard label="First Shipment" value={formatDate(status.firstShipment)} />
+              <StatCard label="Last Shipment" value={formatDate(status.lastShipment)} />
+            </div>
+
+            <div className="mt-5">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                {topListLabel}
+              </p>
+              {!topList || topList.length === 0 ? (
+                <p className="text-sm text-gray-400">No records found for this category.</p>
+              ) : (
+                <div className="overflow-hidden rounded-xl border border-gray-100">
+                  <table className="w-full text-left text-sm">
+                    <tbody className="divide-y divide-gray-100">
+                      {topList.map((entry) => (
+                        <tr key={entry.company}>
+                          <td className="px-3 py-2 font-medium text-gray-900">{entry.company}</td>
+                          <td className="px-3 py-2 text-gray-500">{entry.shipments} shipments</td>
+                          <td className="px-3 py-2 text-right text-gray-600">
+                            {currencyFormatter.format(entry.total_value_pkr)} PKR
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm print:border-gray-300 print:shadow-none">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm print:text-xs">
+            <thead className="bg-orange-50 text-xs font-semibold uppercase tracking-wide text-orange-700 print:bg-gray-100 print:text-gray-800">
+              {mode === "buyer" ? (
+                <tr>
+                  <th className="px-4 py-3 whitespace-nowrap">Date</th>
+                  <th className="px-4 py-3 min-w-[200px]">Buyer (Importer)</th>
+                  <th className="px-4 py-3">Destination</th>
+                  <th className="px-4 py-3">Supplier (Exporter)</th>
+                  <th className="px-4 py-3">HS Code (PCT)</th>
+                  <th className="px-4 py-3 min-w-[300px]">Description</th>
+                  <th className="px-4 py-3">Quantity & Unit</th>
+                  <th 
+                    className="px-4 py-3 text-right cursor-pointer hover:bg-orange-100 transition-colors group print:hover:bg-transparent"
+                    onClick={toggleSortValue}
+                    title="Click to sort by Value"
+                  >
+                    <div className="flex items-center justify-end gap-1">
+                      Value (PKR)
+                      <span className="text-orange-400 group-hover:text-orange-600">
+                        {sort === "value_desc" ? "↓" : sort === "value_asc" ? "↑" : "↕"}
+                      </span>
+                    </div>
+                  </th>
+                </tr>
+              ) : (
+                <tr>
+                  <th className="px-4 py-3 whitespace-nowrap">Date</th>
+                  <th className="px-4 py-3 min-w-[200px]">Supplier (Exporter)</th>
+                  {userRole === "admin" && <th className="px-4 py-3">NTN</th>}
+                  <th className="px-4 py-3">Buyer (Importer)</th>
+                  <th className="px-4 py-3">Destination</th>
+                  <th className="px-4 py-3">HS Code (PCT)</th>
+                  <th className="px-4 py-3 min-w-[300px]">Description</th>
+                  <th className="px-4 py-3">Quantity & Unit</th>
+                  <th 
+                    className="px-4 py-3 text-right cursor-pointer hover:bg-orange-100 transition-colors group print:hover:bg-transparent"
+                    onClick={toggleSortValue}
+                    title="Click to sort by Value"
+                  >
+                    <div className="flex items-center justify-end gap-1">
+                      Value (PKR)
+                      <span className="text-orange-400 group-hover:text-orange-600">
+                        {sort === "value_desc" ? "↓" : sort === "value_asc" ? "↑" : "↕"}
+                      </span>
+                    </div>
+                  </th>
+                </tr>
+              )}
+            </thead>
+            <tbody className="divide-y divide-gray-100 print:divide-gray-300">
+              {loading ? (
+                <tr>
+                  <td colSpan={mode === "buyer" ? 8 : (userRole === "admin" ? 9 : 8)} className="px-4 py-10 text-center text-gray-400">
+                    Loading...
+                  </td>
+                </tr>
+              ) : error ? (
+                <tr>
+                  <td colSpan={mode === "buyer" ? 8 : (userRole === "admin" ? 9 : 8)} className="px-4 py-10 text-center text-red-500 bg-red-50/50">
+                    {error}
+                  </td>
+                </tr>
+              ) : rows.length === 0 ? (
+                <tr>
+                  <td colSpan={mode === "buyer" ? 8 : (userRole === "admin" ? 9 : 8)} className="px-4 py-12 text-center text-gray-500">
+                    No matching shipments found.
+                  </td>
+                </tr>
+              ) : (
+                rows.map((row) => (
+                  mode === "buyer" ? (
+                    <tr key={row.id} onClick={() => setSelectedRow(row)} className="cursor-pointer hover:bg-orange-50/40 print:hover:bg-white">
+                      <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-xs">{formatDate(row.shipment_date)}</td>
+                      <td className="px-4 py-3 font-semibold text-gray-900">{row.company}</td>
+                      <td className="px-4 py-3">
+                        {row.country ? (
+                          <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
+                            {row.country}
+                          </span>
+                        ) : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">{row.counterparty ?? "—"}</td>
+                      <td className="px-4 py-3">
+                        <span className="font-mono text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200">
+                          {row.pct ?? "—"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">
+                        <div className="max-w-xs group relative print:max-w-none">
+                          <div title={row.description}>
+                            {expandedRows[row.id] 
+                              ? row.description 
+                              : (row.description && row.description.length > 80 
+                                  ? row.description.slice(0, 80) + "..." 
+                                  : row.description)}
+                          </div>
+                          {row.description && row.description.length > 80 && (
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); toggleExpand(row.id); }}
+                              className="text-xs text-orange-600 font-medium mt-1 hover:underline no-print"
+                            >
+                              {expandedRows[row.id] ? "Read Less" : "Read More"}
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                        {row.qty ? `${numberFormatter.format(row.qty)} ${row.unit ?? ""}`.trim() : "—"}
+                      </td>
+                      <td className="px-4 py-3 font-medium text-gray-900 text-right whitespace-nowrap">
+                        PKR {currencyFormatter.format(row.value_pkr)}
+                      </td>
+                    </tr>
+                  ) : (
+                    <tr key={row.id} onClick={() => setSelectedRow(row)} className="cursor-pointer hover:bg-orange-50/40 print:hover:bg-white">
+                      <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-xs">{formatDate(row.shipment_date)}</td>
+                      <td className="px-4 py-3 font-semibold text-gray-900">{row.company}</td>
+                      {userRole === "admin" && (
+                        <td className="px-4 py-3">
+                          {row.ntn ? (
+                            <span className="inline-flex items-center rounded-md bg-purple-50 px-2 py-1 text-xs font-medium text-purple-700 ring-1 ring-inset ring-purple-700/10">
+                              {row.ntn}
+                            </span>
+                          ) : "—"}
+                        </td>
+                      )}
+                      <td className="px-4 py-3 text-gray-600">{row.counterparty ?? "—"}</td>
+                      <td className="px-4 py-3">
+                        {row.country ? (
+                          <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
+                            {row.country}
+                          </span>
+                        ) : "—"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="font-mono text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200">
+                          {row.pct ?? "—"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">
+                        <div className="max-w-xs group relative print:max-w-none">
+                          <div title={row.description}>
+                            {expandedRows[row.id] 
+                              ? row.description 
+                              : (row.description && row.description.length > 80 
+                                  ? row.description.slice(0, 80) + "..." 
+                                  : row.description)}
+                          </div>
+                          {row.description && row.description.length > 80 && (
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); toggleExpand(row.id); }}
+                              className="text-xs text-orange-600 font-medium mt-1 hover:underline no-print"
+                            >
+                              {expandedRows[row.id] ? "Read Less" : "Read More"}
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                        {row.qty ? `${numberFormatter.format(row.qty)} ${row.unit ?? ""}`.trim() : "—"}
+                      </td>
+                      <td className="px-4 py-3 font-medium text-gray-900 text-right whitespace-nowrap">
+                        PKR {currencyFormatter.format(row.value_pkr)}
+                      </td>
+                    </tr>
+                  )
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {!loading && !error && (
+        <div className="mt-4 flex items-center justify-between text-sm text-gray-600 no-print">
+          <p>
+            Showing {rows.length} of {total.toLocaleString()} total shipments
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1 || loading}
+              className="rounded-lg border border-gray-200 px-3 py-1.5 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <span className="font-medium text-gray-900">
+              Page {page} of {totalPages || 1}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages || loading}
+              className="rounded-lg border border-gray-200 px-3 py-1.5 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {/* Description Modal */}
+      {selectedRow && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm no-print">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Shipment Details</h3>
+              <button onClick={() => setSelectedRow(null)} className="text-gray-400 hover:text-gray-600 p-1" title="Close" aria-label="Close">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+            <div className="px-6 py-5 overflow-y-auto">
+              <div className="mb-4">
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Supplier</h4>
+                <p className="text-sm font-medium text-gray-900">{selectedRow.company}</p>
+                {selectedRow.ntn && (
+                  <p className="text-xs text-gray-500 mt-0.5">NTN: {selectedRow.ntn}</p>
+                )}
+              </div>
+              
+              <div className="mb-4 grid grid-cols-2 gap-4">
+                <div>
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Date</h4>
+                  <p className="text-sm text-gray-900">{formatDate(selectedRow.shipment_date)}</p>
+                </div>
+                <div>
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">HS Code</h4>
+                  <p className="text-sm text-gray-900">{selectedRow.pct || "—"}</p>
+                </div>
+                <div>
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Destination</h4>
+                  <p className="text-sm text-gray-900">{selectedRow.country || "—"}</p>
+                </div>
+                <div>
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Buyer (Counterparty)</h4>
+                  <p className="text-sm text-gray-900">{selectedRow.counterparty || "—"}</p>
+                </div>
+                <div>
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Value (PKR)</h4>
+                  <p className="text-sm font-medium text-gray-900">PKR {currencyFormatter.format(selectedRow.value_pkr)}</p>
+                </div>
+                <div>
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Quantity</h4>
+                  <p className="text-sm text-gray-900">{selectedRow.qty ? `${numberFormatter.format(selectedRow.qty)} ${selectedRow.unit ?? ""}`.trim() : "—"}</p>
+                </div>
+              </div>
+              
+              <div>
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Full Description</h4>
+                <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed border border-gray-100">
+                  {selectedRow.description}
+                </div>
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end">
+              <button 
+                onClick={() => setSelectedRow(null)}
+                className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
