@@ -15,7 +15,7 @@ export const UserExportToolbar: React.FC<UserExportToolbarProps> = ({
   const [selectedPage, setSelectedPage] = useState<number>(1);
   const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
-  const { downloadsRemaining, resetsAt, refreshQuota } = useUserQuota();
+  const { downloadsRemaining, planLimit, resetsAt, refreshQuota } = useUserQuota();
 
   const isSubscriptionExpired = subscriptionExpiresAt 
     ? new Date(subscriptionExpiresAt) < new Date()
@@ -61,7 +61,7 @@ export const UserExportToolbar: React.FC<UserExportToolbarProps> = ({
               : 'bg-red-50 text-red-700 border-red-300'
           }`}
         >
-          Downloads Remaining Today: {downloadsRemaining} / 10
+          Downloads Remaining Today: {downloadsRemaining} / {planLimit}
         </div>
 
         {/* Page Selector Input */}

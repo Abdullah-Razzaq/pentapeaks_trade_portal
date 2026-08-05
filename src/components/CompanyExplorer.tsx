@@ -17,11 +17,15 @@ type Row = {
   country: string | null;
   counterparty?: string;
   pct?: number | string | null;
-  qty?: number | null;
+  qty?: number | string | null;
   unit?: string | null;
   description: string;
-  value_pkr: number;
+  value_pkr: number | string | null;
   shipment_date: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  website?: string | null;
 };
 
 type ProductStatus = {
@@ -40,7 +44,7 @@ type ProductStatus = {
 };
 
 type Mode = "buyer" | "supplier";
-type SortOrder = "value_desc" | "value_asc" | "az" | "za";
+type SortOrder = "value_desc" | "value_asc" | "az" | "za" | "date_asc" | "date_desc";
 
 const currencyFormatter = new Intl.NumberFormat("en-PK", {
   maximumFractionDigits: 0,
@@ -69,13 +73,15 @@ function StatCard({ label, value }: { label: string; value: string }) {
 }
 
 export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRole?: string }) {
-  const { subscriptionExpiresAt, refreshQuota } = useUserQuota();
+  const { subscriptionExpiresAt, refreshQuota, planType } = useUserQuota();
   const [query, setQuery] = useState("");
   const [product, setProduct] = useState("");
   const [destinationCountry, setDestinationCountry] = useState("");
-  const [sort, setSort] = useState<SortOrder>("value_desc");
+  const [sort, setSort] = useState<SortOrder>("date_asc");
   const [page, setPage] = useState(1);
   const limit = 50;
+  const isSortingDisabled = planType === "trial" && userRole !== "admin";
+  const isCompanyFilterDisabled = planType === "trial" && userRole !== "admin";
   
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
@@ -240,6 +246,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
         destination_country: destinationCountry,
         hs_code: hsCodeFilter,
         format: format,
+        sort: sort,
       });
       
       let allRows: string[][] = [];
@@ -326,10 +333,26 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
             body: allRows,
             startY: 20,
             styles: { fontSize: 7 },
-            headStyles: { fillColor: [30, 41, 59] }
+            headStyles: { fillColor: [30, 41, 59] },
+            didDrawPage: (data) => {
+              doc.setFontSize(8);
+              doc.setTextColor(128, 128, 128);
+              doc.text(
+                "© Pentapeaks International",
+                data.settings.margin.left,
+                doc.internal.pageSize.getHeight() - 10
+              );
+            }
           });
         } else {
           doc.text("No shipments found.", 14, 25);
+          doc.setFontSize(8);
+          doc.setTextColor(128, 128, 128);
+          doc.text(
+            "© Pentapeaks International",
+            14,
+            doc.internal.pageSize.getHeight() - 10
+          );
         }
         
         doc.save(finalFilenamePdf);
@@ -489,15 +512,32 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
       </div>
 
       <div className="mb-6 flex flex-col gap-3 sm:flex-row no-print">
-        <input
-          value={query}
-          onChange={(event) => {
-            setQuery(event.target.value);
-            setPage(1);
-          }}
-          placeholder="Filter by company name..."
-          className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100 sm:w-64"
-        />
+        <div className="relative group w-full sm:w-64">
+          <input
+            value={query}
+            disabled={isCompanyFilterDisabled}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setPage(1);
+            }}
+            placeholder={isCompanyFilterDisabled ? "Filter locked (Upgrade to Pro)" : "Filter by company name..."}
+            className={`w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100 ${
+              isCompanyFilterDisabled ? "cursor-not-allowed bg-gray-50 text-gray-400" : ""
+            }`}
+          />
+          {isCompanyFilterDisabled && (
+            <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            </div>
+          )}
+          {isCompanyFilterDisabled && (
+            <div className="absolute top-full left-0 mt-1 z-50 flex opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="bg-gray-900 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap shadow-lg">
+                Upgrade to Pro to filter by company
+              </div>
+            </div>
+          )}
+        </div>
         <input
           value={product}
           onChange={(event) => {
@@ -523,9 +563,16 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
             setSort(event.target.value as SortOrder);
             setPage(1);
           }}
-          title="Sort by"
-          className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100 sm:w-48"
+          disabled={isSortingDisabled}
+          title={isSortingDisabled ? "Sorting is available for Pro and Premium users." : "Sort by"}
+          className={`w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none transition sm:w-64 ${
+            isSortingDisabled 
+              ? "bg-gray-50 text-gray-500 cursor-not-allowed opacity-80" 
+              : "bg-white text-gray-900 focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+          }`}
         >
+          <option value="date_asc">Sort: Date (Oldest to Newest)</option>
+          <option value="date_desc">Sort: Date (Newest to Oldest)</option>
           <option value="value_desc">Sort: Value (Highest)</option>
           <option value="value_asc">Sort: Value (Lowest)</option>
           <option value="az">Sort: Name (A → Z)</option>
@@ -655,15 +702,17 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
                   <th className="px-4 py-3 min-w-[300px]">Description</th>
                   <th className="px-4 py-3">Quantity & Unit</th>
                   <th 
-                    className="px-4 py-3 text-right cursor-pointer hover:bg-orange-100 transition-colors group print:hover:bg-transparent"
-                    onClick={toggleSortValue}
-                    title="Click to sort by Value"
+                    className={`px-4 py-3 text-right ${isSortingDisabled ? '' : 'cursor-pointer hover:bg-orange-100 transition-colors group print:hover:bg-transparent'}`}
+                    onClick={isSortingDisabled ? undefined : toggleSortValue}
+                    title={isSortingDisabled ? "Sorting by value is available for Pro and Premium users." : "Click to sort by Value"}
                   >
                     <div className="flex items-center justify-end gap-1">
                       Value (PKR)
-                      <span className="text-orange-400 group-hover:text-orange-600">
-                        {sort === "value_desc" ? "↓" : sort === "value_asc" ? "↑" : "↕"}
-                      </span>
+                      {!isSortingDisabled && (
+                        <span className="text-orange-400 group-hover:text-orange-600">
+                          {sort === "value_desc" ? "↓" : sort === "value_asc" ? "↑" : "↕"}
+                        </span>
+                      )}
                     </div>
                   </th>
                 </tr>
@@ -678,15 +727,17 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
                   <th className="px-4 py-3 min-w-[300px]">Description</th>
                   <th className="px-4 py-3">Quantity & Unit</th>
                   <th 
-                    className="px-4 py-3 text-right cursor-pointer hover:bg-orange-100 transition-colors group print:hover:bg-transparent"
-                    onClick={toggleSortValue}
-                    title="Click to sort by Value"
+                    className={`px-4 py-3 text-right ${isSortingDisabled ? '' : 'cursor-pointer hover:bg-orange-100 transition-colors group print:hover:bg-transparent'}`}
+                    onClick={isSortingDisabled ? undefined : toggleSortValue}
+                    title={isSortingDisabled ? "Sorting by value is available for Pro and Premium users." : "Click to sort by Value"}
                   >
                     <div className="flex items-center justify-end gap-1">
                       Value (PKR)
-                      <span className="text-orange-400 group-hover:text-orange-600">
-                        {sort === "value_desc" ? "↓" : sort === "value_asc" ? "↑" : "↕"}
-                      </span>
+                      {!isSortingDisabled && (
+                        <span className="text-orange-400 group-hover:text-orange-600">
+                          {sort === "value_desc" ? "↓" : sort === "value_asc" ? "↑" : "↕"}
+                        </span>
+                      )}
                     </div>
                   </th>
                 </tr>
@@ -750,10 +801,30 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
                         </div>
                       </td>
                       <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
-                        {row.qty ? `${numberFormatter.format(row.qty)} ${row.unit ?? ""}`.trim() : "—"}
+                        {row.qty === "••••••••" ? (
+                          <div className="relative group inline-block">
+                            <span className="text-sm text-gray-400 blur-[3px] select-none cursor-not-allowed">123,456</span>
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="bg-gray-900 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap flex items-center gap-1 shadow-lg">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                Upgrade to Pro
+                              </div>
+                            </div>
+                          </div>
+                        ) : row.qty ? `${numberFormatter.format(row.qty as number)} ${row.unit ?? ""}`.trim() : "—"}
                       </td>
                       <td className="px-4 py-3 font-medium text-gray-900 text-right whitespace-nowrap">
-                        PKR {currencyFormatter.format(row.value_pkr)}
+                        {row.value_pkr === "••••••••" ? (
+                          <div className="relative group inline-block">
+                            <span className="text-sm text-gray-400 blur-[3px] select-none cursor-not-allowed">PKR 123,456</span>
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="bg-gray-900 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap flex items-center gap-1 shadow-lg">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                Upgrade to Pro
+                              </div>
+                            </div>
+                          </div>
+                        ) : row.value_pkr === null ? "—" : `PKR ${currencyFormatter.format(row.value_pkr as number)}`}
                       </td>
                     </tr>
                   ) : (
@@ -802,10 +873,30 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
                         </div>
                       </td>
                       <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
-                        {row.qty ? `${numberFormatter.format(row.qty)} ${row.unit ?? ""}`.trim() : "—"}
+                        {row.qty === "••••••••" ? (
+                          <div className="relative group inline-block">
+                            <span className="text-sm text-gray-400 blur-[3px] select-none cursor-not-allowed">123,456</span>
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="bg-gray-900 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap flex items-center gap-1 shadow-lg">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                Upgrade to Pro
+                              </div>
+                            </div>
+                          </div>
+                        ) : row.qty ? `${numberFormatter.format(row.qty as number)} ${row.unit ?? ""}`.trim() : "—"}
                       </td>
                       <td className="px-4 py-3 font-medium text-gray-900 text-right whitespace-nowrap">
-                        PKR {currencyFormatter.format(row.value_pkr)}
+                        {row.value_pkr === "••••••••" ? (
+                          <div className="relative group inline-block">
+                            <span className="text-sm text-gray-400 blur-[3px] select-none cursor-not-allowed">PKR 123,456</span>
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="bg-gray-900 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap flex items-center gap-1 shadow-lg">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                Upgrade to Pro
+                              </div>
+                            </div>
+                          </div>
+                        ) : row.value_pkr === null ? "—" : `PKR ${currencyFormatter.format(row.value_pkr as number)}`}
                       </td>
                     </tr>
                   )
@@ -855,7 +946,9 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
             </div>
             <div className="px-6 py-5 overflow-y-auto">
               <div className="mb-4">
-                <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Supplier</h4>
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
+                  {mode === "buyer" ? "Buyer (Importer)" : "Supplier (Exporter)"}
+                </h4>
                 <p className="text-sm font-medium text-gray-900">{selectedRow.company}</p>
                 {selectedRow.ntn && (
                   <p className="text-xs text-gray-500 mt-0.5">NTN: {selectedRow.ntn}</p>
@@ -876,16 +969,114 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
                   <p className="text-sm text-gray-900">{selectedRow.country || "—"}</p>
                 </div>
                 <div>
-                  <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Buyer (Counterparty)</h4>
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
+                    {mode === "buyer" ? "Supplier (Exporter)" : "Buyer (Importer)"}
+                  </h4>
                   <p className="text-sm text-gray-900">{selectedRow.counterparty || "—"}</p>
                 </div>
                 <div>
                   <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Value (PKR)</h4>
-                  <p className="text-sm font-medium text-gray-900">PKR {currencyFormatter.format(selectedRow.value_pkr)}</p>
+                  {selectedRow.value_pkr === "••••••••" ? (
+                    <div className="relative group inline-block">
+                      <span className="text-sm text-gray-400 blur-[3px] select-none cursor-not-allowed">PKR 123,456</span>
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="bg-gray-900 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap flex items-center gap-1 shadow-lg">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                          Upgrade to Pro
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm font-medium text-gray-900">
+                      {selectedRow.value_pkr === null ? "—" : `PKR ${currencyFormatter.format(selectedRow.value_pkr as number)}`}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Quantity</h4>
-                  <p className="text-sm text-gray-900">{selectedRow.qty ? `${numberFormatter.format(selectedRow.qty)} ${selectedRow.unit ?? ""}`.trim() : "—"}</p>
+                  {selectedRow.qty === "••••••••" ? (
+                    <div className="relative group inline-block">
+                      <span className="text-sm text-gray-400 blur-[3px] select-none cursor-not-allowed">123,456</span>
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="bg-gray-900 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap flex items-center gap-1 shadow-lg">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                          Upgrade to Pro
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-900">{selectedRow.qty ? `${numberFormatter.format(selectedRow.qty as number)} ${selectedRow.unit ?? ""}`.trim() : "—"}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2 border-b border-gray-100 pb-1">Contact Details</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-xs text-gray-500 block mb-1">Email</span>
+                    {selectedRow.email === "••••••••" ? (
+                      <div className="relative group inline-block">
+                        <span className="text-sm text-gray-400 blur-[3px] select-none cursor-not-allowed">contact@example.com</span>
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="bg-gray-900 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap flex items-center gap-1 shadow-lg">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                            Upgrade to Premium
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-900">{selectedRow.email || "—"}</p>
+                    )}
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500 block mb-1">Phone</span>
+                    {selectedRow.phone === "••••••••" ? (
+                      <div className="relative group inline-block">
+                        <span className="text-sm text-gray-400 blur-[3px] select-none cursor-not-allowed">+92-XXX-XXXXXXX</span>
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="bg-gray-900 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap flex items-center gap-1 shadow-lg">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                            Upgrade to Premium
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-900">{selectedRow.phone || "—"}</p>
+                    )}
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500 block mb-1">Website</span>
+                    {selectedRow.website === "••••••••" ? (
+                      <div className="relative group inline-block">
+                        <span className="text-sm text-gray-400 blur-[3px] select-none cursor-not-allowed">https://example.com</span>
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="bg-gray-900 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap flex items-center gap-1 shadow-lg">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                            Upgrade to Premium
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-900">{selectedRow.website || "—"}</p>
+                    )}
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500 block mb-1">Address</span>
+                    {selectedRow.address === "••••••••" ? (
+                      <div className="relative group inline-block">
+                        <span className="text-sm text-gray-400 blur-[3px] select-none cursor-not-allowed">Address not yet verified</span>
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="bg-gray-900 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap flex items-center gap-1 shadow-lg">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                            Upgrade to Premium
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-900">{selectedRow.address || "—"}</p>
+                    )}
+                  </div>
                 </div>
               </div>
               

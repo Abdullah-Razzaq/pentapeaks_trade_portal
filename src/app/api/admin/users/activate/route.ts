@@ -27,11 +27,7 @@ export async function POST(request: Request) {
        SET 
          subscription_status = 'ACTIVE',
          subscription_start_date = CURRENT_TIMESTAMP,
-         subscription_expires_at = CASE
-           WHEN subscription_expires_at IS NOT NULL AND subscription_expires_at > CURRENT_TIMESTAMP
-             THEN subscription_expires_at + INTERVAL '30 days'
-           ELSE CURRENT_TIMESTAMP + INTERVAL '30 days'
-         END,
+         subscription_expires_at = CURRENT_TIMESTAMP + INTERVAL '30 days',
          downloads_today = 0,
          last_download_date = CURRENT_DATE,
          is_active = true,

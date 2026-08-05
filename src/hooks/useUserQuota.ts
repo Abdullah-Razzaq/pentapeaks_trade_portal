@@ -3,6 +3,7 @@ import { usePathname } from 'next/navigation';
 
 export function useUserQuota() {
   const [downloadsToday, setDownloadsToday] = useState<number>(0);
+  const [planType, setPlanType] = useState<string>('trial');
   const [subscriptionExpiresAt, setSubscriptionExpiresAt] = useState<string | null>(null);
   const [resetsAt, setResetsAt] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -19,6 +20,7 @@ export function useUserQuota() {
           setDownloadsToday(data.user.downloads_today ?? 0);
           setSubscriptionExpiresAt(data.user.subscription_expires_at ?? null);
           setResetsAt(data.user.resetsAt ?? null);
+          setPlanType(data.user.plan_type ?? 'trial');
         }
       }
     } catch (err) {
@@ -34,11 +36,14 @@ export function useUserQuota() {
     init();
   }, [pathname, fetchQuota]);
 
-  const downloadsRemaining = Math.max(0, 10 - downloadsToday);
+  const planLimit = planType === 'premium' ? 10 : (planType === 'pro' ? 10 : 2);
+  const downloadsRemaining = Math.max(0, planLimit - downloadsToday);
 
   return {
     downloadsToday,
     downloadsRemaining,
+    planLimit,
+    planType,
     refreshQuota: fetchQuota,
     subscriptionExpiresAt,
     resetsAt,

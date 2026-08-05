@@ -18,7 +18,7 @@ export async function GET() {
   }
 
   const { rows } = await pool.query(
-    `SELECT id, name, email, role, is_active, created_at
+    `SELECT id, name, email, role, is_active, plan_type, subscription_expires_at, created_at, batch
      FROM users
      ORDER BY created_at DESC`
   );
@@ -54,12 +54,12 @@ export async function POST(request: NextRequest) {
 
   const startDate = new Date();
   const expireDate = new Date();
-  expireDate.setDate(startDate.getDate() + 30);
+  expireDate.setDate(startDate.getDate() + 7);
 
   const { rows } = await pool.query(
-    `INSERT INTO users (name, email, password_hash, role, is_active, subscription_expires_at)
-     VALUES ($1, $2, $3, $4, true, $5)
-     RETURNING id, name, email, role, is_active, subscription_expires_at, created_at`,
+    `INSERT INTO users (name, email, password_hash, role, is_active, subscription_expires_at, plan_type)
+     VALUES ($1, $2, $3, $4, true, $5, 'trial')
+     RETURNING id, name, email, role, is_active, subscription_expires_at, plan_type, created_at`,
     [name, normalizedEmail, passwordHash, role, expireDate]
   );
 

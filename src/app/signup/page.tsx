@@ -5,23 +5,25 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 
-export default function LoginPage() {
+export default function SignupPage() {
   const router = useRouter();
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [batch, setBatch] = useState("Not a Student");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [maxBatch, setMaxBatch] = useState(15);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const searchParams = new URLSearchParams(window.location.search);
-      if (searchParams.get("signup") === "success") {
-        setTimeout(() => {
-          setSuccessMsg("Account created successfully! Please sign in.");
-        }, 0);
-      }
-    }
+    fetch("/api/admin/settings/batch-limit")
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data && data.current_max_batch) {
+          setMaxBatch(data.current_max_batch);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   async function handleSubmit(event: FormEvent) {
@@ -29,17 +31,17 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/login", {
+      const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ name, email, password, batch }),
       });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "Something went wrong. Please try again.");
         return;
       }
-      router.push("/dashboard");
+      router.push("/login?signup=success");
       router.refresh();
     } catch {
       setError("Unable to reach the server. Please try again.");
@@ -48,11 +50,16 @@ export default function LoginPage() {
     }
   }
 
+  const batchOptions = [
+    "Not a Student",
+    ...Array.from({ length: maxBatch }, (_, i) => `Batch ${i + 1}`)
+  ];
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-orange-50 px-4">
-      <div className="w-full max-w-sm rounded-2xl border border-orange-100 bg-white p-8 shadow-sm">
+    <div className="flex min-h-screen items-center justify-center bg-orange-50 px-4 py-12">
+      <div className="w-full max-w-sm rounded-2xl border border-orange-100 bg-white p-8 shadow-sm my-8">
         <div className="mb-8 flex flex-col items-center gap-4">
-          <div className="relative flex h-16 w-16 min-w-16 items-center justify-center overflow-hidden rounded-full border border-gray-100 shadow-sm">
+          <div className="relative flex h-16 w-16 min-w-16 items-center justify-center overflow-hidden rounded-full border-2 border-gray-900 shadow-sm">
             <Image 
               alt="Pentapeaks Trade Portal Logo" 
               className="scale-110 object-cover" 
@@ -64,13 +71,28 @@ export default function LoginPage() {
           </div>
           <div className="text-center">
             <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-              Pentapeaks Trade Portal
+              Create an Account
             </h1>
-            <p className="mt-1 text-sm text-gray-500">Import &amp; Export Intelligence</p>
+            <p className="mt-1 text-sm text-gray-500">Sign up for your free trial</p>
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="name" className="mb-1 block text-sm font-medium text-gray-700">
+              Full Name
+            </label>
+            <input
+              id="name"
+              type="text"
+              required
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+              placeholder="John Doe"
+            />
+          </div>
+
           <div>
             <label htmlFor="email" className="mb-1 block text-sm font-medium text-gray-700">
               Email
@@ -83,9 +105,26 @@ export default function LoginPage() {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
-              placeholder="you@company.com"
+              placeholder="you@gmail.com"
             />
           </div>
+
+          <div>
+            <label htmlFor="batch" className="mb-1 block text-sm font-medium text-gray-700">
+              Student Batch
+            </label>
+            <select
+              id="batch"
+              value={batch}
+              onChange={(event) => setBatch(event.target.value)}
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100 bg-white"
+            >
+              {batchOptions.map(opt => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+          </div>
+
           <div>
             <label htmlFor="password" className="mb-1 block text-sm font-medium text-gray-700">
               Password
@@ -94,24 +133,15 @@ export default function LoginPage() {
               id="password"
               type="password"
               required
-              autoComplete="current-password"
+              minLength={6}
+              autoComplete="new-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
               placeholder="••••••••"
             />
+            <p className="mt-1 text-xs text-gray-500">Minimum 6 characters</p>
           </div>
-
-          {successMsg && (
-            <div className="rounded-lg bg-green-50 border border-green-200 p-4">
-              <div className="flex items-start gap-3">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-600 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-                <p className="text-sm text-green-800 leading-relaxed font-medium">{successMsg}</p>
-              </div>
-            </div>
-          )}
 
           {error && (
             <div className="rounded-lg bg-orange-50 border border-orange-200 p-4">
@@ -129,14 +159,14 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {loading ? "Signing in..." : "Sign In"}
+            {loading ? "Creating account..." : "Sign Up"}
           </button>
         </form>
 
         <p className="mt-6 text-center text-sm text-gray-600">
-          Don&apos;t have an account?{" "}
-          <Link href="/signup" className="font-semibold text-orange-600 hover:text-orange-500 transition-colors">
-            Sign up
+          Already have an account?{" "}
+          <Link href="/login" className="font-semibold text-orange-600 hover:text-orange-500 transition-colors">
+            Sign in
           </Link>
         </p>
       </div>

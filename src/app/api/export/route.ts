@@ -12,25 +12,29 @@ export async function GET(request: NextRequest) {
 
   const isAdmin = session.role === "admin";
   const userId = session.userId;
+  let planType = "trial";
+  let subscriptionExpiresAt: Date | null = null;
+
+  if (!isAdmin) {
+    const { rows: userRows } = await pool.query(
+      `SELECT subscription_expires_at, plan_type FROM users WHERE id = $1`,
+      [userId]
+    );
+    if (userRows.length === 0) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+    planType = userRows[0].plan_type;
+    subscriptionExpiresAt = userRows[0].subscription_expires_at ? new Date(userRows[0].subscription_expires_at) : null;
+  }
 
   const intent = request.nextUrl.searchParams.get("intent")?.trim();
 
   // For standard users, enforce quota checks only if they are actually downloading
   if (!isAdmin && intent === "download") {
-    // 1. Fetch user subscription data first
-    const { rows: userRows } = await pool.query(
-      `SELECT subscription_expires_at FROM users WHERE id = $1`,
-      [userId]
-    );
-
-    if (userRows.length === 0) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    const { subscription_expires_at } = userRows[0];
+    const planLimit = planType === 'premium' ? 10 : (planType === 'pro' ? 10 : 2);
 
     // Check subscription expiration
-    if (subscription_expires_at && new Date(subscription_expires_at) < new Date()) {
+    if (subscriptionExpiresAt && subscriptionExpiresAt < new Date()) {
       return NextResponse.json(
         { error: "Your 30-day plan has expired. Please renew your subscription to continue downloading data.", isExpired: true },
         { status: 403, headers: { "X-Plan-Expired": "true" } }
@@ -44,15 +48,15 @@ export async function GET(request: NextRequest) {
                                   ELSE downloads_today + 1 END,
            last_download_date = NOW()
        WHERE id = $1
-         AND ((last_download_date AT TIME ZONE 'UTC')::date <> (NOW() AT TIME ZONE 'UTC')::date OR downloads_today < 10)
+         AND ((last_download_date AT TIME ZONE 'UTC')::date <> (NOW() AT TIME ZONE 'UTC')::date OR downloads_today < $2)
        RETURNING downloads_today, last_download_date`,
-      [userId]
+      [userId, planLimit]
     );
 
     if (updateRows.length === 0) {
       return NextResponse.json(
         { 
-          error: "Daily download limit reached (10/10). Your limit will reset tomorrow.", 
+          error: `Daily download limit reached (${planLimit}/${planLimit}). Your limit will reset tomorrow.`, 
           code: "LIMIT_REACHED" 
         },
         { status: 429 }
@@ -83,6 +87,23 @@ export async function GET(request: NextRequest) {
   const limit = pageCount * ROWS_PER_PAGE;
   const offset = (startPage - 1) * ROWS_PER_PAGE;
 
+  const maskNtn = !isAdmin && planType === 'trial';
+  const maskContact = !isAdmin && planType !== 'premium';
+  const maskValue = !isAdmin && planType === 'trial';
+
+  let sort = request.nextUrl.searchParams.get("sort")?.trim() ?? "date_asc";
+  if (!isAdmin && planType === "trial") {
+    sort = "date_asc";
+  }
+
+  const orderClause =
+    sort === "az" ? 'ORDER BY exporter ASC' : 
+    sort === "za" ? 'ORDER BY exporter DESC' : 
+    sort === "value_asc" ? 'ORDER BY value_pkr ASC' : 
+    sort === "value_desc" ? 'ORDER BY value_pkr DESC NULLS LAST' :
+    sort === "date_desc" ? 'ORDER BY date DESC NULLS LAST' :
+    'ORDER BY date ASC NULLS LAST';
+
   try {
     // 1. Get Total Count for UI Progress
     const countResult = await pool.query(
@@ -103,21 +124,22 @@ export async function GET(request: NextRequest) {
       `SELECT
          date AS "Date",
          exporter AS "Supplier",
-         ${isAdmin ? 'ntn AS "NTN",' : ""}
+         ${maskNtn ? '' : 'ntn AS "NTN",'}
          importer AS "Buyer",
          origin AS "Destination",
          pct AS "HS Code",
-         qty AS "Quantity",
+         ${maskValue ? '' : 'qty AS "Quantity",'}
          unit AS "Unit",
-         description AS "Description",
-         value_pkr AS "Value (PKR)"
+         description AS "Description"
+         ${maskValue ? '' : ', value_pkr AS "Value (PKR)"'}
+         ${maskContact ? '' : ', email AS "Email", phone AS "Phone", address AS "Address", website AS "Website"'}
        FROM export_shipments
        WHERE exporter IS NOT NULL
          AND ($1 = '' OR exporter ILIKE '%' || $1 || '%')
          AND ($2 = '' OR description ILIKE '%' || $2 || '%')
          AND ($3 = '' OR origin = $3)
          AND ($4 = '' OR REPLACE(to_char(pct, 'FM0000.0000'), '.', '') LIKE REPLACE($4, '.', '') || '%')
-       ORDER BY value_pkr DESC NULLS LAST
+       ${orderClause}
        LIMIT $5 OFFSET $6`,
       [company, product, destination_country, hs_code, limit, offset]
     );

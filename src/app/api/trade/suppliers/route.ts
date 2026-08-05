@@ -18,11 +18,30 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const company = request.nextUrl.searchParams.get("company")?.trim() ?? "";
+  const isAdmin = session.role === "admin";
+  let planType = "trial";
+  if (!isAdmin) {
+    const { rows: userRows } = await pool.query(
+      `SELECT plan_type FROM users WHERE id = $1`,
+      [session.userId]
+    );
+    if (userRows.length > 0) {
+      planType = userRows[0].plan_type;
+    }
+  }
+
+  let company = request.nextUrl.searchParams.get("company")?.trim() ?? "";
+  if (!isAdmin && planType === "trial") {
+    company = "";
+  }
   const product = request.nextUrl.searchParams.get("product")?.trim() ?? "";
   const destination_country = request.nextUrl.searchParams.get("destination_country")?.trim() ?? "";
   const hs_code = request.nextUrl.searchParams.get("hs_code")?.trim() ?? "";
-  const sort = request.nextUrl.searchParams.get("sort")?.trim() ?? "value_desc";
+  let sort = request.nextUrl.searchParams.get("sort")?.trim() ?? "date_asc";
+  if (!isAdmin && planType === "trial") {
+    sort = "date_asc";
+  }
+
   const page = Math.max(1, Number(request.nextUrl.searchParams.get("page")) || 1);
   const limit = 50;
   const offset = (page - 1) * limit;
@@ -31,41 +50,82 @@ export async function GET(request: NextRequest) {
     sort === "az" ? "ORDER BY exporter ASC" : 
     sort === "za" ? "ORDER BY exporter DESC" : 
     sort === "value_asc" ? "ORDER BY value_pkr ASC" : 
-    "ORDER BY value_pkr DESC NULLS LAST";
+    sort === "value_desc" ? "ORDER BY value_pkr DESC NULLS LAST" :
+    sort === "date_desc" ? "ORDER BY date DESC NULLS LAST" :
+    "ORDER BY date ASC NULLS LAST";
 
-  const { rows } = await pool.query(
-    `SELECT
-       id,
-       exporter AS company,
-       ntn,
-       origin AS country,
-       importer AS counterparty,
-       pct,
-       qty,
-       unit,
-       description,
-       COALESCE(value_pkr, 0)::float8 AS value_pkr,
-       date AS shipment_date,
-       COUNT(*) OVER()::int AS total_count
+  const countResult = await pool.query(
+    `SELECT COUNT(*)
      FROM export_shipments
      WHERE exporter IS NOT NULL
        AND ($1 = '' OR exporter ILIKE '%' || $1 || '%')
        AND ($2 = '' OR description ILIKE '%' || $2 || '%')
        AND ($3 = '' OR origin = $3)
-       AND ($4 = '' OR REPLACE(to_char(pct, 'FM0000.0000'), '.', '') LIKE REPLACE($4, '.', '') || '%')
-     ${orderClause}
-     LIMIT $5 OFFSET $6`,
-    [company, product, destination_country, hs_code, limit, offset]
+       AND ($4 = '' OR REPLACE(to_char(pct, 'FM0000.0000'), '.', '') LIKE REPLACE($4, '.', '') || '%')`,
+    [company, product, destination_country, hs_code]
   );
-
-  const total = rows.length > 0 ? rows[0].total_count : 0;
   
-  const isAdmin = session.role === "admin";
+  let total = parseInt(countResult.rows[0].count, 10);
+  
+  if (!isAdmin && planType === 'trial') {
+    total = Math.floor(total / 2);
+  }
 
-  // Remove total_count and mask NTN field for regular non-admin users
-  const results = rows.map(({ total_count: _total_count, ...rest }) => ({
-    ...rest,
-    ntn: isAdmin ? rest.ntn : undefined,
+  let actualLimit = limit;
+  if (!isAdmin && planType === 'trial') {
+    if (offset >= total) {
+      actualLimit = 0;
+    } else if (offset + limit > total) {
+      actualLimit = total - offset;
+    }
+  }
+
+  let rows: any[] = [];
+  if (actualLimit > 0) {
+    const { rows: dataRows } = await pool.query(
+      `SELECT
+         id,
+         exporter AS company,
+         ntn,
+         email,
+         phone,
+         address,
+         website,
+         origin AS country,
+         importer AS counterparty,
+         pct,
+         qty,
+         unit,
+         description,
+         COALESCE(value_pkr, 0)::float8 AS value_pkr,
+         date AS shipment_date
+       FROM export_shipments
+       WHERE exporter IS NOT NULL
+         AND ($1 = '' OR exporter ILIKE '%' || $1 || '%')
+         AND ($2 = '' OR description ILIKE '%' || $2 || '%')
+         AND ($3 = '' OR origin = $3)
+         AND ($4 = '' OR REPLACE(to_char(pct, 'FM0000.0000'), '.', '') LIKE REPLACE($4, '.', '') || '%')
+       ${orderClause}
+       LIMIT $5 OFFSET $6`,
+      [company, product, destination_country, hs_code, actualLimit, offset]
+    );
+    rows = dataRows;
+  }
+  
+  const maskNtn = !isAdmin && planType === 'trial';
+  const maskContact = !isAdmin && planType !== 'premium';
+  const maskValue = !isAdmin && planType === 'trial';
+  const maskString = "••••••••";
+
+  const results = rows.map((row) => ({
+    ...row,
+    ntn: maskNtn ? undefined : row.ntn,
+    email: maskContact ? maskString : row.email,
+    phone: maskContact ? maskString : row.phone,
+    address: maskContact ? maskString : row.address,
+    website: maskContact ? maskString : row.website,
+    qty: maskValue ? maskString : row.qty,
+    value_pkr: maskValue ? maskString : row.value_pkr,
   }));
 
   return NextResponse.json({ results, total, page, limit });

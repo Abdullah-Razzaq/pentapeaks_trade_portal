@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 type Role = "admin" | "user";
 
@@ -11,9 +11,11 @@ type User = {
   role: Role;
   is_active: boolean;
   created_at: string;
+  plan_type: "trial" | "pro" | "premium";
+  subscription_expires_at: string | null;
+  batch: string | null;
 };
 
-const emptyForm = { name: "", email: "", password: "", role: "user" as Role };
 
 export default function AdminUsersPanel({ currentUserId }: { currentUserId: number }) {
   const [users, setUsers] = useState<User[]>([]);
@@ -21,9 +23,11 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
   const [listError, setListError] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<number | null>(null);
 
-  const [form, setForm] = useState(emptyForm);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  /* ── Batch Limit State ── */
+  const [maxBatch, setMaxBatch] = useState<number>(15);
+  const [newMaxBatch, setNewMaxBatch] = useState<string>("15");
+  const [updatingBatch, setUpdatingBatch] = useState(false);
+
 
   /* ── Delete feature state ── */
   const [deleteConfirmUser, setDeleteConfirmUser] = useState<User | null>(null);
@@ -47,30 +51,39 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
   }
 
   useEffect(() => {
-    const init = async () => { await loadUsers(true); };
+    const init = async () => {
+      await loadUsers(true);
+      try {
+        const res = await fetch("/api/admin/settings/batch-limit");
+        if (res.ok) {
+          const data = await res.json();
+          setMaxBatch(data.current_max_batch);
+          setNewMaxBatch(data.current_max_batch.toString());
+        }
+      } catch { }
+    };
     init();
   }, []);
 
-  async function handleCreate(event: FormEvent) {
-    event.preventDefault();
-    setFormError(null);
-    setSubmitting(true);
+  async function handleUpdateBatchLimit() {
+    setUpdatingBatch(true);
     try {
-      const res = await fetch("/api/admin/users", {
-        method: "POST",
+      const res = await fetch("/api/admin/settings/batch-limit", {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ current_max_batch: parseInt(newMaxBatch, 10) })
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Failed to create user.");
-      setForm(emptyForm);
-      await loadUsers();
+      if (!res.ok) throw new Error(data.error ?? "Failed to update limit.");
+      setMaxBatch(data.current_max_batch);
+      alert("Batch limit updated successfully.");
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Failed to create user.");
+      alert(err instanceof Error ? err.message : "Error updating batch limit.");
     } finally {
-      setSubmitting(false);
+      setUpdatingBatch(false);
     }
   }
+
 
   async function toggleActive(user: User) {
     setTogglingId(user.id);
@@ -85,6 +98,29 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
       await loadUsers();
     } catch (err) {
       setListError(err instanceof Error ? err.message : "Failed to update user.");
+    } finally {
+      setTogglingId(null);
+    }
+  }
+
+  async function togglePlan(user: User, newPlan: "trial" | "pro" | "premium") {
+    setTogglingId(user.id);
+    if (!window.confirm(`Are you sure you want to switch ${user.name} to the ${newPlan.toUpperCase()} plan?`)) {
+      setTogglingId(null);
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planType: newPlan }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to update user plan.");
+      await loadUsers();
+    } catch (err) {
+      setListError(err instanceof Error ? err.message : "Failed to update user plan.");
     } finally {
       setTogglingId(null);
     }
@@ -127,6 +163,7 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
       setTogglingId(null);
     }
   }
+
   return (
     <div className="mx-auto max-w-5xl">
       <h1 className="text-2xl font-semibold text-gray-900">Manage Users</h1>
@@ -134,56 +171,31 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
         View all registered users and control who can access the portal.
       </p>
 
-      <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-orange-600">
-          Add New User
-        </h2>
-        <form onSubmit={handleCreate} className="grid gap-4 sm:grid-cols-2">
+      {/* Global Batch Limit Settings Card */}
+      <div className="mt-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm flex items-center justify-between">
+        <div>
+          <h2 className="text-sm font-semibold text-black">Current Batch Limit</h2>
+          <p className="text-xs text-gray-500">Maximum batch number available for new signups.</p>
+        </div>
+        <div className="flex items-center gap-3">
           <input
-            required
-            placeholder="Full name"
-            value={form.name}
-            onChange={(event) => setForm({ ...form, name: event.target.value })}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+            type="number"
+            min="1"
+            max="100"
+            value={newMaxBatch}
+            onChange={(e) => setNewMaxBatch(e.target.value)}
+            className="w-20 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-black placeholder:text-black disabled:text-black opacity-100 outline-none transition focus:border-orange-400 focus:ring-1 focus:ring-orange-400"
           />
-          <input
-            required
-            type="email"
-            placeholder="Email address"
-            value={form.email}
-            onChange={(event) => setForm({ ...form, email: event.target.value })}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
-          />
-          <input
-            required
-            type="password"
-            minLength={6}
-            placeholder="Temporary password"
-            value={form.password}
-            onChange={(event) => setForm({ ...form, password: event.target.value })}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
-          />
-          <select
-            title="Role"
-            value={form.role}
-            onChange={(event) => setForm({ ...form, role: event.target.value as Role })}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
-          >
-            <option value="user">User</option>
-            <option value="admin">Admin</option>
-          </select>
-
-          {formError && <p className="text-sm text-red-600 sm:col-span-2">{formError}</p>}
-
           <button
-            type="submit"
-            disabled={submitting}
-            className="rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60 sm:col-span-2"
+            onClick={handleUpdateBatchLimit}
+            disabled={updatingBatch || parseInt(newMaxBatch, 10) === maxBatch}
+            className="rounded-lg bg-gray-100 px-4 py-1.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {submitting ? "Creating..." : "Create User"}
+            {updatingBatch ? "Saving..." : "Update"}
           </button>
-        </form>
+        </div>
       </div>
+
 
       <div className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
@@ -193,8 +205,12 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">Email</th>
                 <th className="px-4 py-3">Role</th>
+                <th className="px-4 py-3">Batch</th>
+                <th className="px-4 py-3">Plan</th>
+                <th className="px-4 py-3">Days Left</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Joined</th>
+                <th className="px-4 py-3">End Date</th>
                 <th className="px-4 py-3">Action</th>
               </tr>
             </thead>
@@ -223,11 +239,27 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
                     <td className="px-4 py-3 font-medium text-gray-900">{user.name}</td>
                     <td className="px-4 py-3 text-gray-600">{user.email}</td>
                     <td className="px-4 py-3 capitalize text-gray-600">{user.role}</td>
+                    <td className="px-4 py-3 text-gray-600">{user.batch || "Not a Student"}</td>
                     <td className="px-4 py-3">
                       <span
-                        className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                          user.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
-                        }`}
+                        className={`rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${user.plan_type === "premium" ? "bg-amber-100 text-amber-700" :
+                            user.plan_type === "pro" ? "bg-purple-100 text-purple-700" : "bg-gray-100 text-gray-600"
+                          }`}
+                      >
+                        {user.plan_type}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {(() => {
+                        if (!user.subscription_expires_at) return "—";
+                        const daysLeft = Math.ceil((new Date(user.subscription_expires_at).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                        return daysLeft > 0 ? `${daysLeft} days` : "Expired";
+                      })()}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-semibold ${user.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
+                          }`}
                       >
                         {user.is_active ? "Active" : "Inactive"}
                       </span>
@@ -239,17 +271,47 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
                         year: "numeric",
                       })}
                     </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {(() => {
+                        if (!user.subscription_expires_at) return "—";
+                        return new Date(user.subscription_expires_at).toLocaleDateString("en-GB", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        });
+                      })()}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
+
+                        {user.plan_type !== "pro" && (
+                          <button
+                            onClick={() => togglePlan(user, "pro")}
+                            disabled={togglingId === user.id || user.id === currentUserId}
+                            title={user.id === currentUserId ? "You cannot change your own plan." : undefined}
+                            className="rounded-lg border border-purple-200 px-3 py-1.5 text-xs font-semibold text-purple-600 transition hover:bg-purple-50 disabled:cursor-not-allowed disabled:opacity-50 whitespace-nowrap"
+                          >
+                            Switch to Pro
+                          </button>
+                        )}
+                        {user.plan_type !== "premium" && (
+                          <button
+                            onClick={() => alert("Premium is coming soon and not yet available.")}
+                            disabled={togglingId === user.id || user.id === currentUserId}
+                            title={user.id === currentUserId ? "You cannot change your own plan." : undefined}
+                            className="rounded-lg border border-amber-200 px-3 py-1.5 text-xs font-semibold text-amber-600 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50 whitespace-nowrap"
+                          >
+                            Switch to Premium
+                          </button>
+                        )}
                         <button
                           onClick={() => toggleActive(user)}
                           disabled={togglingId === user.id || user.id === currentUserId}
                           title={user.id === currentUserId ? "You cannot change your own status." : undefined}
-                          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
-                            user.is_active
+                          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${user.is_active
                               ? "border border-red-200 text-red-600 hover:bg-red-50"
                               : "border border-green-200 text-green-600 hover:bg-green-50"
-                          }`}
+                            }`}
                         >
                           {togglingId === user.id ? "..." : user.is_active ? "Deactivate" : "Activate"}
                         </button>
@@ -257,7 +319,7 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
                           onClick={() => renew30Days(user)}
                           disabled={togglingId === user.id || user.id === currentUserId}
                           title={user.id === currentUserId ? "You cannot change your own status." : "Renew 30 Days"}
-                          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 border border-blue-200 text-blue-600 hover:bg-blue-50`}
+                          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 border border-blue-200 text-blue-600 hover:bg-blue-50 whitespace-nowrap`}
                         >
                           Renew 30 Days
                         </button>

@@ -19,6 +19,20 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  if (session.role !== "admin") {
+    const { rows: userRows } = await pool.query(
+      `SELECT plan_type FROM users WHERE id = $1`,
+      [session.userId]
+    );
+
+    if (userRows.length > 0 && userRows[0].plan_type !== 'premium') {
+      return NextResponse.json(
+        { error: "Check Tariff/VAT is a Premium feature" },
+        { status: 403 }
+      );
+    }
+  }
+
   const exportCountry = request.nextUrl.searchParams.get("export_country")?.trim() ?? "";
   const importCountry = request.nextUrl.searchParams.get("import_country")?.trim() ?? "";
   const hsCode = request.nextUrl.searchParams.get("hs_code")?.trim() ?? "";
