@@ -38,8 +38,11 @@ export async function POST(request: NextRequest) {
       [resetCode, resetExpiresAt, user.id]
     );
 
+    const origin = request.headers.get("origin");
+    const baseUrl = origin || process.env.NEXT_PUBLIC_APP_URL || "https://trade.pentapeaks.com";
+
     try {
-      await sendPasswordResetEmail(normalizedEmail, resetCode);
+      await sendPasswordResetEmail(normalizedEmail, resetCode, baseUrl);
     } catch (emailError) {
       console.error("Failed to send reset email:", emailError);
       return NextResponse.json({ error: "Failed to send email. Please try again later." }, { status: 500 });

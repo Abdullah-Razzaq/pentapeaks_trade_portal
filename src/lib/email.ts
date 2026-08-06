@@ -4,8 +4,8 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const defaultFrom = process.env.EMAIL_FROM || "Pentapeaks Trade Portal <noreply@trade.pentapeaks.com>";
 const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-export async function sendVerificationEmail(to: string, code: string) {
-  const verificationLink = `${appUrl}/api/auth/verify?token=${code}&email=${encodeURIComponent(to)}`;
+export async function sendVerificationEmail(to: string, code: string, baseUrl: string) {
+  const verificationLink = `${baseUrl}/api/auth/verify?token=${code}&email=${encodeURIComponent(to)}`;
   
   try {
     await resend.emails.send({
@@ -31,8 +31,8 @@ export async function sendVerificationEmail(to: string, code: string) {
   }
 }
 
-export async function sendPasswordResetEmail(to: string, code: string) {
-  const resetLink = `${appUrl}/reset-password?token=${code}&email=${encodeURIComponent(to)}`;
+export async function sendPasswordResetEmail(to: string, code: string, baseUrl: string) {
+  const resetLink = `${baseUrl}/reset-password?token=${code}&email=${encodeURIComponent(to)}`;
 
   try {
     await resend.emails.send({

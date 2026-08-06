@@ -30,7 +30,7 @@ export default function LoginClient() {
 
   useEffect(() => {
     if (successMsg) {
-      const timer = setTimeout(() => setSuccessMsg(null), 500);
+      const timer = setTimeout(() => setSuccessMsg(null), 5000);
       return () => clearTimeout(timer);
     }
   }, [successMsg]);

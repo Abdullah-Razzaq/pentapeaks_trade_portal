@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { pool } from "@/lib/db";
-import crypto from "crypto";
-import { createSessionToken, SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,57 +7,61 @@ export async function GET(request: NextRequest) {
     const email = request.nextUrl.searchParams.get("email");
 
     if (!token || !email) {
-      return NextResponse.json({ error: "Missing token or email" }, { status: 400 });
+      return NextResponse.redirect(new URL("/login?error=invalid_link", request.url));
     }
 
     const normalizedEmail = email.toLowerCase();
 
+    // Query pending verifications
     const { rows } = await pool.query(
-      "SELECT id, name, email, role, verification_code, verification_code_expires_at FROM users WHERE email = $1",
-      [normalizedEmail]
+      "SELECT token, email, name, password_hash, batch, expires_at FROM pending_verifications WHERE token = $1 AND email = $2",
+      [token, normalizedEmail]
     );
 
     if (rows.length === 0) {
-      return NextResponse.redirect(new URL("/login?error=user_not_found", request.url));
+      return NextResponse.redirect(new URL("/login?error=invalid_or_expired_link", request.url));
     }
 
-    const user = rows[0];
+    const pending = rows[0];
 
-    if (!user.verification_code || user.verification_code !== token) {
-      return NextResponse.redirect(new URL("/login?error=invalid_token", request.url));
-    }
-
-    if (new Date() > new Date(user.verification_code_expires_at)) {
+    if (new Date() > new Date(pending.expires_at)) {
+      await pool.query("DELETE FROM pending_verifications WHERE token = $1", [token]);
       return NextResponse.redirect(new URL("/login?error=token_expired", request.url));
     }
 
-    const sessionToken = crypto.randomUUID();
+    // Set subscription expiry (3 days trial)
+    const startDate = new Date();
+    const expireDate = new Date();
+    expireDate.setDate(startDate.getDate() + 3);
 
-    // Activate user, clear codes, and set session token
-    await pool.query(
-      "UPDATE users SET is_active = true, verification_code = NULL, verification_code_expires_at = NULL, current_session_token = $1 WHERE id = $2",
-      [sessionToken, user.id]
-    );
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      
+      // Check if user somehow was created while this was pending
+      const existingUser = await client.query("SELECT id FROM users WHERE email = $1", [normalizedEmail]);
+      if (existingUser.rows.length === 0) {
+        // Insert into users
+        await client.query(
+          `INSERT INTO users (name, email, password_hash, role, is_active, subscription_expires_at, plan_type, batch)
+           VALUES ($1, $2, $3, 'user', true, $4, 'trial', $5)`,
+          [pending.name, normalizedEmail, pending.password_hash, expireDate, pending.batch]
+        );
+      }
+      
+      // Delete from pending
+      await client.query("DELETE FROM pending_verifications WHERE email = $1", [normalizedEmail]);
+      
+      await client.query('COMMIT');
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
 
-    const authToken = await createSessionToken({
-      userId: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-      sessionToken,
-    });
-
-    const response = NextResponse.redirect(new URL("/dashboard", request.url));
-
-    response.cookies.set(SESSION_COOKIE_NAME, authToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: SESSION_MAX_AGE_SECONDS,
-    });
-
-    return response;
+    // Redirect to login with success message
+    return NextResponse.redirect(new URL("/login?verified=true", request.url));
   } catch (error) {
     console.error("Verify email GET error:", error);
     return NextResponse.redirect(new URL("/login?error=internal_error", request.url));

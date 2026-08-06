@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
 
     const normalizedEmail = email.toLowerCase();
 
-    // 1. Check for existing email
+    // 1. Check for existing email in users
     const existing = await pool.query("SELECT id FROM users WHERE email = $1", [normalizedEmail]);
     if (existing.rows.length > 0) {
       return NextResponse.json({ error: "A user with this email already exists." }, { status: 409 });
@@ -59,33 +59,32 @@ export async function POST(request: NextRequest) {
     // 2. Hash password
     const passwordHash = await hashPassword(password);
 
-    // 3. Set subscription expiry (3 days trial)
-    const startDate = new Date();
-    const expireDate = new Date();
-    expireDate.setDate(startDate.getDate() + 3);
-
-    // Generate 6-digit OTP
-    const verificationCode = crypto.randomInt(100000, 999999).toString();
+    // Generate secure token for magic link
+    const verificationToken = crypto.randomBytes(32).toString('hex');
     const verificationExpiresAt = new Date();
-    verificationExpiresAt.setMinutes(verificationExpiresAt.getMinutes() + 15);
+    verificationExpiresAt.setHours(verificationExpiresAt.getHours() + 24); // 24 hours validity
 
-    // 4. Insert new user (inactive until verified)
-    const { rows } = await pool.query(
-      `INSERT INTO users (name, email, password_hash, role, is_active, subscription_expires_at, plan_type, batch, verification_code, verification_code_expires_at)
-       VALUES ($1, $2, $3, 'user', false, $4, 'trial', $5, $6, $7)
-       RETURNING id, name, email, role, is_active, subscription_expires_at, plan_type, batch, created_at`,
-      [name, normalizedEmail, passwordHash, expireDate, batch, verificationCode, verificationExpiresAt]
+    // 3. Upsert into pending_verifications (allow resending if requested again)
+    await pool.query(
+      `INSERT INTO pending_verifications (token, email, name, password_hash, batch, expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (token) DO NOTHING`,
+      [verificationToken, normalizedEmail, name, passwordHash, batch, verificationExpiresAt]
     );
 
-    // 5. Send Email
+    // Dynamic Base URL handling
+    const origin = request.headers.get("origin");
+    const baseUrl = origin || process.env.NEXT_PUBLIC_APP_URL || "https://trade.pentapeaks.com";
+
+    // 4. Send Email
     try {
-      await sendVerificationEmail(normalizedEmail, verificationCode);
+      await sendVerificationEmail(normalizedEmail, verificationToken, baseUrl);
     } catch (emailError) {
       console.error("Failed to send verification email:", emailError);
-      // We could delete the user here or leave them inactive and let them resend
+      return NextResponse.json({ error: "Failed to send verification email. Please try again." }, { status: 500 });
     }
 
-    return NextResponse.json({ user: rows[0], message: "Verification code sent." }, { status: 201 });
+    return NextResponse.json({ message: "Verification link sent." }, { status: 201 });
   } catch (error) {
     console.error("Signup error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
