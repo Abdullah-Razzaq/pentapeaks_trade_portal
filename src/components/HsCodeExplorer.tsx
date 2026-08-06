@@ -80,15 +80,15 @@ export default function HsCodeExplorer() {
         </button>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white/90 backdrop-blur-md shadow-lg">
-        <div className="overflow-x-auto">
+      <div className="w-full overflow-x-auto rounded-xl border border-slate-200/80 shadow-sm scrollbar-thin bg-white/90 backdrop-blur-md">
+        <div>
           <table className="w-full text-left text-sm">
             <thead className="bg-orange-50 text-xs font-semibold uppercase tracking-wide text-orange-700">
               <tr>
-                <th className="px-4 py-3">HS Code</th>
-                <th className="px-4 py-3">Section</th>
-                <th className="px-4 py-3">Description</th>
-                <th className="px-4 py-3">Level</th>
+                <th className="px-4 py-3 whitespace-nowrap">HS Code</th>
+                <th className="px-4 py-3 whitespace-nowrap">Section</th>
+                <th className="px-4 py-3 whitespace-nowrap">Description</th>
+                <th className="px-4 py-3 whitespace-nowrap">Level</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">

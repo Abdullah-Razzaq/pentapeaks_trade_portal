@@ -60,7 +60,7 @@ export default function LoginClient() {
   }
 
   return (
-    <div className="relative w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-2xl dark:border-gray-200 dark:bg-white my-8">
+    <div className="relative w-full max-w-md mx-4 p-6 sm:p-8 rounded-2xl max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 bg-white dark:border-gray-200 dark:bg-white my-8">
       <Link href="/" className="absolute right-6 top-6 text-gray-600 hover:text-slate-600 dark:hover:text-gray-700 transition-colors">
         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -97,7 +97,7 @@ export default function LoginClient() {
               autoComplete="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 placeholder:text-gray-400"
+              className="w-full rounded-lg border border-gray-300 bg-gray-50 py-3 px-4 text-base text-gray-900 outline-none transition focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 placeholder:text-gray-400"
               placeholder="you@company.com"
             />
           </div>
@@ -117,7 +117,7 @@ export default function LoginClient() {
               autoComplete="current-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 placeholder:text-gray-400"
+              className="w-full rounded-lg border border-gray-300 bg-gray-50 py-3 px-4 text-base text-gray-900 outline-none transition focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 placeholder:text-gray-400"
               placeholder="••••••••"
             />
           </div>
@@ -147,7 +147,7 @@ export default function LoginClient() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-semibold text-black shadow-md transition-all hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full rounded-lg bg-amber-500 py-3 px-4 text-base font-semibold text-black shadow-md transition-all hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? "Signing in..." : "Sign In"}
           </button>

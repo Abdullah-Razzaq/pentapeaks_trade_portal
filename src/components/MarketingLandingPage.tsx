@@ -7,7 +7,7 @@ export default function MarketingLandingPage() {
     <div className="flex min-h-screen flex-col bg-gray-50 text-gray-900 selection:bg-orange-500/30 font-sans">
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b border-gray-200 bg-white/80 backdrop-blur-md">
-        <div className="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className="container mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-8 py-4">
           <div className="flex items-center gap-3">
             <div className="relative h-8 w-8 overflow-hidden rounded-full border border-gray-200">
               <Image
@@ -51,7 +51,7 @@ export default function MarketingLandingPage() {
 
           <div className="container relative mx-auto max-w-7xl px-4 text-center sm:px-6 lg:px-8">
             <div className="mx-auto max-w-4xl">
-              <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 sm:text-5xl lg:text-6xl leading-tight">
+              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-gray-900 leading-tight">
                 Pakistan&apos;s Premier B2B Trade Intelligence & Verified Buyer Database
               </h1>
               <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-gray-800 font-medium">
@@ -147,64 +147,72 @@ export default function MarketingLandingPage() {
                   <p className="mt-4 text-lg font-semibold text-slate-800 drop-shadow-sm">Choose the plan that fits your business needs and scale your global trade operations.</p>
                 </div>
 
-                <div className="grid gap-8 md:grid-cols-2 max-w-5xl mx-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 max-w-5xl mx-auto px-4 py-12">
                   {/* Pro Plan Card */}
-                  <div className="rounded-3xl border border-white/30 bg-white/20 p-8 shadow-lg backdrop-blur-md text-slate-900 transition-all hover:border-white/50 hover:bg-white/30 hover:shadow-xl relative overflow-hidden flex flex-col h-full">
-                    <div className="absolute top-0 right-0 p-8 opacity-10">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                    </div>
-                    <div className="relative z-10 flex-1 flex flex-col">
-                      <h3 className="text-2xl font-bold text-slate-900 mb-2">Pentapeaks Pro</h3>
-                      <div className="mb-6">
-                        <span className="text-5xl font-extrabold tracking-tight text-slate-900">4,500 PKR</span>
-                        <span className="text-base text-slate-600 font-medium ml-1">/month</span>
+                  <div className="bg-slate-950/80 backdrop-blur-md border border-blue-500/30 text-white rounded-3xl p-6 sm:p-8 flex flex-col justify-between shadow-2xl">
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <svg className="h-6 w-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 2l3 6.5L22 9l-5 5 1.5 7L12 18l-6.5 3L7 14l-5-5 7-1.5z"></path></svg>
+                        <h3 className="text-2xl font-bold">Pentapeaks Pro</h3>
                       </div>
-                      <p className="text-slate-600 mb-8 text-base leading-relaxed flex-1">
+                      <div className="mb-6">
+                        <span className="text-3xl sm:text-5xl font-extrabold tracking-tight">4,500 PKR</span>
+                        <span className="text-base text-blue-200 font-medium ml-1">/month</span>
+                      </div>
+                      <p className="text-blue-100/80 mb-8 text-base leading-relaxed">
                         Unlock full records, company filters, and 10 downloads/day.
                       </p>
-                      <ul className="space-y-4 mb-10 text-sm font-medium text-slate-700">
+                      <ul className="space-y-4 mb-10 text-sm font-medium">
                         <li className="flex items-start">
-                          <svg className="mr-3 h-5 w-5 text-purple-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"></path></svg>
+                          <svg className="mr-3 h-5 w-5 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                           Full NTN and FBR Verified Data
                         </li>
                         <li className="flex items-start">
-                          <svg className="mr-3 h-5 w-5 text-purple-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"></path></svg>
+                          <svg className="mr-3 h-5 w-5 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                           Every month new and more data added
                         </li>
                         <li className="flex items-start">
-                          <svg className="mr-3 h-5 w-5 text-purple-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"></path></svg>
+                          <svg className="mr-3 h-5 w-5 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                           View complete shipment quantity and value metrics
                         </li>
                         <li className="flex items-start">
-                          <svg className="mr-3 h-5 w-5 text-purple-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"></path></svg>
+                          <svg className="mr-3 h-5 w-5 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                           Filter and search directly by company name
                         </li>
                       </ul>
-                      <a
-                        href="https://wa.me/923086222283?text=Hi%2C%20I%20would%20like%20to%20upgrade%20my%20PentaPeaks%20account"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex w-full items-center justify-center rounded-xl bg-slate-100 px-5 py-4 text-base font-bold text-slate-900 transition hover:bg-gray-100 shadow-xl"
-                      >
-                        Contact Us to Upgrade
-                      </a>
                     </div>
+                    <a
+                      href="https://wa.me/923086222283?text=Hi%2C%20I%20would%20like%20to%20upgrade%20my%20PentaPeaks%20account"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-blue-400 px-5 py-4 text-base font-bold text-white transition hover:from-blue-500 hover:to-blue-300 shadow-xl"
+                    >
+                      Contact Us to Upgrade -&gt;
+                    </a>
                   </div>
 
                   {/* Premium Plan Card */}
-                  <div className="rounded-3xl border border-white/30 bg-white/20 p-8 shadow-lg backdrop-blur-md text-slate-900 transition-all hover:border-white/50 hover:bg-white/30 hover:shadow-xl relative overflow-hidden flex flex-col h-full group min-h-[400px] justify-center">
-                    <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 p-8 opacity-5">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
-                    </div>
-                    <div className="relative z-10 flex flex-col items-center justify-center text-center">
-                      <h3 className="text-3xl font-bold text-slate-900 mb-6">Pentapeaks Premium</h3>
-                      <div>
-                        <span className="inline-flex items-center rounded-full bg-amber-100 px-6 py-3 text-sm sm:text-base font-bold text-amber-700 shadow-sm border border-amber-200">
-                          Coming Soon — Big Development & Features in Progress
+                  <div className="bg-white/80 backdrop-blur-md border border-white/60 text-slate-900 rounded-3xl p-6 sm:p-8 flex flex-col justify-between shadow-2xl">
+                    <div>
+                      <div className="flex items-center gap-2 mb-6">
+                        <svg className="h-6 w-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 2l3 6.5L22 9l-5 5 1.5 7L12 18l-6.5 3L7 14l-5-5 7-1.5z"></path></svg>
+                        <h3 className="text-2xl font-bold">Pentapeaks Premium</h3>
+                      </div>
+                      <div className="flex justify-center mb-8">
+                        <div className="bg-sky-50 p-6 rounded-full border border-sky-100">
+                          <svg className="h-16 w-16 text-amber-500" fill="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 2l3 6.5L22 9l-5 5 1.5 7L12 18l-6.5 3L7 14l-5-5 7-1.5z"></path></svg>
+                        </div>
+                      </div>
+                      <div className="bg-amber-500/15 border border-amber-400/40 p-4 rounded-2xl flex items-start gap-3 mb-6">
+                        <svg className="h-6 w-6 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        <span className="text-amber-800 font-bold leading-tight">
+                          Coming Soon — Big Development &amp; Features in Progress
                         </span>
                       </div>
                     </div>
+                    <p className="text-slate-600 font-medium text-center text-sm">
+                      We&apos;re working on powerful new features to deliver even more value and smarter insights.
+                    </p>
                   </div>
                 </div>
               </div>

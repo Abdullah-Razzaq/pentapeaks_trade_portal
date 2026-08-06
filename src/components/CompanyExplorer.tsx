@@ -708,7 +708,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
               {!topList || topList.length === 0 ? (
                 <p className="text-sm text-gray-400">No records found for this category.</p>
               ) : (
-                <div className="overflow-hidden rounded-xl border border-gray-100">
+                <div className="w-full overflow-x-auto rounded-xl border border-slate-200/80 shadow-sm scrollbar-thin">
                   <table className="w-full text-left text-sm">
                     <tbody className="divide-y divide-gray-100">
                       {topList.map((entry) => (
@@ -729,21 +729,21 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
         )}
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm print:border-gray-300 print:shadow-none">
-        <div className="overflow-x-auto">
+      <div className="w-full overflow-x-auto rounded-xl border border-slate-200/80 shadow-sm scrollbar-thin bg-white print:border-gray-300 print:shadow-none">
+        <div>
           <table className="w-full text-left text-sm print:text-xs">
             <thead className="bg-orange-50 text-xs font-semibold uppercase tracking-wide text-orange-700 print:bg-gray-100 print:text-gray-800">
               {mode === "buyer" ? (
                 <tr>
                   <th className="px-4 py-3 whitespace-nowrap">Date</th>
-                  <th className="px-4 py-3 min-w-[200px]">Buyer (Importer)</th>
-                  <th className="px-4 py-3">Destination</th>
-                  <th className="px-4 py-3">Supplier (Exporter)</th>
-                  <th className="px-4 py-3">HS Code (PCT)</th>
-                  <th className="px-4 py-3 min-w-[300px]">Description</th>
-                  <th className="px-4 py-3">Quantity & Unit</th>
+                  <th className="px-4 py-3 min-w-[200px] whitespace-nowrap">Buyer (Importer)</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Destination</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Supplier (Exporter)</th>
+                  <th className="px-4 py-3 whitespace-nowrap">HS Code (PCT)</th>
+                  <th className="px-4 py-3 min-w-[300px] whitespace-nowrap">Description</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Quantity & Unit</th>
                   <th 
-                    className={`px-4 py-3 text-right ${isSortingDisabled ? '' : 'cursor-pointer hover:bg-orange-100 transition-colors group print:hover:bg-transparent'}`}
+                    className={`px-4 py-3 text-right whitespace-nowrap ${isSortingDisabled ? '' : 'cursor-pointer hover:bg-orange-100 transition-colors group print:hover:bg-transparent'}`}
                     onClick={isSortingDisabled ? undefined : toggleSortValue}
                     title={isSortingDisabled ? "Sorting by value is available for Pro and Premium users." : "Click to sort by Value"}
                   >
@@ -760,15 +760,15 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
               ) : (
                 <tr>
                   <th className="px-4 py-3 whitespace-nowrap">Date</th>
-                  <th className="px-4 py-3 min-w-[200px]">Supplier (Exporter)</th>
-                  {userRole === "admin" && <th className="px-4 py-3">NTN</th>}
-                  <th className="px-4 py-3">Buyer (Importer)</th>
-                  <th className="px-4 py-3">Destination</th>
-                  <th className="px-4 py-3">HS Code (PCT)</th>
-                  <th className="px-4 py-3 min-w-[300px]">Description</th>
-                  <th className="px-4 py-3">Quantity & Unit</th>
+                  <th className="px-4 py-3 min-w-[200px] whitespace-nowrap">Supplier (Exporter)</th>
+                  {userRole === "admin" && <th className="px-4 py-3 whitespace-nowrap">NTN</th>}
+                  <th className="px-4 py-3 whitespace-nowrap">Buyer (Importer)</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Destination</th>
+                  <th className="px-4 py-3 whitespace-nowrap">HS Code (PCT)</th>
+                  <th className="px-4 py-3 min-w-[300px] whitespace-nowrap">Description</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Quantity & Unit</th>
                   <th 
-                    className={`px-4 py-3 text-right ${isSortingDisabled ? '' : 'cursor-pointer hover:bg-orange-100 transition-colors group print:hover:bg-transparent'}`}
+                    className={`px-4 py-3 text-right whitespace-nowrap ${isSortingDisabled ? '' : 'cursor-pointer hover:bg-orange-100 transition-colors group print:hover:bg-transparent'}`}
                     onClick={isSortingDisabled ? undefined : toggleSortValue}
                     title={isSortingDisabled ? "Sorting by value is available for Pro and Premium users." : "Click to sort by Value"}
                   >
