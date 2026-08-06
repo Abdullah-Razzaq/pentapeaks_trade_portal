@@ -17,8 +17,6 @@ export default function SignupClient() {
   
   // Step 2 state
   const [step, setStep] = useState<1 | 2>(1);
-  const [code, setCode] = useState("");
-  const [verifying, setVerifying] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
@@ -62,33 +60,7 @@ export default function SignupClient() {
     }
   }
 
-  async function handleVerify(event: FormEvent) {
-    event.preventDefault();
-    setError(null);
-    setVerifying(true);
-    try {
-      const res = await fetch("/api/auth/verify-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "Invalid verification code.");
-        return;
-      }
-      // Verification successful, show message briefly then redirect
-      setSuccessMsg("Email verified successfully! Redirecting...");
-      setTimeout(() => {
-        router.push("/dashboard");
-        router.refresh();
-      }, 1500); // 1.5s delay to let them see the message
-    } catch {
-      setError("Unable to reach the server. Please try again.");
-    } finally {
-      setVerifying(false);
-    }
-  }
+
 
   const batchOptions = [
     "Not a Student",
