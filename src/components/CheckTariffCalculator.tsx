@@ -129,9 +129,9 @@ export default function CheckTariffCalculator() {
               </div>
               <h3 className="text-lg font-bold text-gray-900 mb-2">Check Tariff/VAT is a Premium feature</h3>
               <p className="text-sm text-gray-500 mb-6">Upgrade to our Premium plan to access live customs duty, VAT, and trade agreement data for all countries.</p>
-              <button className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-lg transition-colors">
-                Contact us to upgrade
-              </button>
+              <a href="/dashboard#pro-card" className="block w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-lg transition-colors text-center">
+                Upgrade Now
+              </a>
             </div>
           </div>
         )}

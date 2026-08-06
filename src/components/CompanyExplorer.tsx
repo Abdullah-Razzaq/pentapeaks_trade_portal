@@ -82,6 +82,10 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
   const limit = 50;
   const isSortingDisabled = planType === "trial" && userRole !== "admin";
   const isCompanyFilterDisabled = planType === "trial" && userRole !== "admin";
+  const isDestinationFilterDisabled = planType === "trial" && userRole !== "admin";
+  const isTrial = planType === "trial" && userRole !== "admin";
+  const isProductSearchLocked = isTrial;
+  const isProductStatusLocked = isTrial;
   
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
@@ -579,25 +583,57 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
             </div>
           )}
         </div>
-        <input
-          value={product}
-          onChange={(event) => {
-            setProduct(event.target.value);
-            setPage(1);
-          }}
-          placeholder="Filter by product / description..."
-          className="w-full rounded-xl border border-gray-200 bg-white/90 backdrop-blur-md px-4 py-2.5 text-sm text-gray-900 shadow-sm outline-none transition hover:border-amber-500 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 sm:w-72"
-        />
-        <Combobox
-          value={destinationCountry}
-          onChange={(val) => {
-            setDestinationCountry(val);
-            setPage(1);
-          }}
-          options={availableCountries}
-          placeholder="Filter by destination country..."
-          className="w-full sm:w-64"
-        />
+        <div className="relative group w-full sm:w-72">
+          <input
+            value={product}
+            disabled={isProductSearchLocked}
+            onChange={(event) => {
+              setProduct(event.target.value);
+              setPage(1);
+            }}
+            placeholder={isProductSearchLocked ? "Product search locked" : "Filter by product / description..."}
+            className={`w-full rounded-xl border border-gray-200 bg-white/90 backdrop-blur-md px-4 py-2.5 text-sm text-gray-900 shadow-sm outline-none transition hover:border-amber-500 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 ${
+              isProductSearchLocked ? "cursor-not-allowed bg-gray-50 text-gray-400 opacity-70" : ""
+            }`}
+          />
+          {isProductSearchLocked && (
+            <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            </div>
+          )}
+          {isProductSearchLocked && (
+            <div className="absolute top-full left-0 mt-1 z-50 flex opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="bg-gray-900 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap shadow-lg">
+                Upgrade to Pro to search by product
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="relative group w-full sm:w-64">
+          <Combobox
+            value={destinationCountry}
+            disabled={isDestinationFilterDisabled}
+            onChange={(val) => {
+              setDestinationCountry(val);
+              setPage(1);
+            }}
+            options={availableCountries}
+            placeholder={isDestinationFilterDisabled ? "Filter locked (Upgrade to Pro)" : "Filter by destination country..."}
+            className="w-full sm:w-64"
+          />
+          {isDestinationFilterDisabled && (
+            <div className="absolute inset-y-0 right-8 flex items-center pointer-events-none">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            </div>
+          )}
+          {isDestinationFilterDisabled && (
+            <div className="absolute top-full left-0 mt-1 z-50 flex opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="bg-gray-900 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap shadow-lg">
+                Upgrade to Pro to filter by destination
+              </div>
+            </div>
+          )}
+        </div>
         <select
           value={sort}
           onChange={(event) => {
@@ -622,10 +658,22 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
       </div>
 
       <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm no-print">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-orange-600">
-            Check Product Status
-          </h2>
+        <div className="flex items-center justify-between mb-3 relative">
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-orange-600">
+              Check Product Status
+            </h2>
+            {isProductStatusLocked && (
+              <div className="group relative flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-orange-500"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                <div className="absolute top-full left-0 mt-1 z-50 flex opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                  <div className="bg-gray-900 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap shadow-lg">
+                    Product status filter is available on the Pro Plan.
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
           <button
             type="button"
             onClick={handleResetToInitialState}
@@ -637,7 +685,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
             </svg>
           </button>
         </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className={`flex flex-col gap-3 sm:flex-row sm:items-end ${isProductStatusLocked ? 'opacity-60 pointer-events-none grayscale-[50%]' : ''}`}>
           <div className="flex-1 min-w-[200px]">
             <label className="mb-1 block text-xs font-medium text-gray-700">Primary Category</label>
             <Combobox
@@ -651,6 +699,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
               }}
               options={primaryOptions}
               placeholder="Search primary category..."
+              disabled={isProductStatusLocked}
             />
           </div>
           <div className="flex-1 min-w-[200px]">
@@ -664,6 +713,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
               }}
               options={secondaryOptions}
               placeholder="Search secondary category..."
+              disabled={isProductStatusLocked}
             />
           </div>
           <div className="flex-1 min-w-[200px]">
@@ -673,11 +723,12 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
               onChange={setTertiary}
               options={tertiaryOptions}
               placeholder="Search tertiary category..."
+              disabled={isProductStatusLocked}
             />
           </div>
           <button
             onClick={checkStatus}
-            disabled={!primary || statusLoading}
+            disabled={!primary || statusLoading || isProductStatusLocked}
             className="rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60 h-[42px]"
           >
             {statusLoading ? "Checking..." : "Check Status"}
@@ -947,6 +998,14 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
           </table>
         </div>
       </div>
+
+      {isTrial && product && rows.length > 0 && (
+        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-center shadow-sm">
+          <p className="text-sm font-semibold text-amber-800">
+            Showing limited results. Upgrade to Pro to unlock full search results and unlimited records.
+          </p>
+        </div>
+      )}
 
       {!loading && !error && (
         <div className="mt-4 flex items-center justify-between text-sm text-gray-600 no-print">

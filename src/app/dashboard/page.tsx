@@ -54,15 +54,25 @@ export default async function DashboardPage() {
             <p className="text-gray-600 text-sm sm:text-base mb-6 max-w-md leading-relaxed">
               Join our exclusive Import/Export Mentorship Program. Learn the secrets of international sourcing and global buyers directly from industry experts.
             </p>
-            <a
-              href="https://pentapeaks.com/mentorship#enroll"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center rounded-xl bg-amber-500 px-6 py-3 text-sm font-bold text-slate-950 shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-600 hover:-translate-y-0.5 hover:shadow-amber-500/40"
-            >
-              Explore Mentorship
-              <svg className="ml-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-            </a>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <a
+                href="https://pentapeaks.com/mentorship#curriculum"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center rounded-xl bg-amber-500 px-6 py-3 text-sm font-bold text-slate-950 shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-600 hover:-translate-y-0.5 hover:shadow-amber-500/40"
+              >
+                Explore Mentorship
+                <svg className="ml-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+              </a>
+              <a
+                href="https://pentapeaks.com/mentorship#enroll"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-6 py-3 text-sm font-bold text-white shadow-lg transition-all hover:bg-slate-800 hover:-translate-y-0.5"
+              >
+                Enroll Now
+              </a>
+            </div>
           </div>
 
           <div className="hidden md:block shrink-0 relative">
@@ -151,7 +161,7 @@ export default async function DashboardPage() {
 
         {/* Right Sidebar: Brand Feed */}
         <div className="space-y-6">
-          <h3 className="text-xl font-bold text-gray-900 mb-4 hidden lg:block">Client Success Stories</h3>
+          <h3 className="text-xl font-bold text-gray-900 mb-4 hidden lg:block">Satisfied Student Reviews</h3>
 
           <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-xl">
             <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center group cursor-pointer mb-4">
@@ -173,7 +183,7 @@ export default async function DashboardPage() {
 
       {/* Upgrade Plan Section */}
       {planType === "trial" && session.role !== "admin" && (
-        <div className="mt-10 mb-6">
+        <div id="pro-card" className="mt-10 mb-6 scroll-mt-24 target:ring-4 target:ring-amber-500 target:bg-amber-50/50 transition-all duration-700 rounded-3xl p-2 -mx-2">
           <div className="mb-6 flex items-center justify-between">
             <h2 className="text-2xl font-bold text-gray-900">Upgrade Your Plan</h2>
             <div className="inline-flex items-center rounded-full bg-white border border-gray-200 px-3 py-1.5 text-xs font-bold text-gray-600">

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { pool } from "@/lib/db";
 import { ALL_COUNTRIES } from "@/lib/countryCodes";
+import { enforceSearchSecurity } from "@/lib/rateLimit";
 
 export async function GET(request: NextRequest) {
   const session = await getSession();
@@ -19,19 +20,26 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  let planType = "trial";
   if (session.role !== "admin") {
     const { rows: userRows } = await pool.query(
       `SELECT plan_type FROM users WHERE id = $1`,
       [session.userId]
     );
 
-    if (userRows.length > 0 && userRows[0].plan_type !== 'premium') {
-      return NextResponse.json(
-        { error: "Check Tariff/VAT is a Premium feature" },
-        { status: 403 }
-      );
+    if (userRows.length > 0) {
+      planType = userRows[0].plan_type;
+      if (planType !== 'premium') {
+        return NextResponse.json(
+          { error: "Check Tariff/VAT is a Premium feature" },
+          { status: 403 }
+        );
+      }
     }
   }
+
+  const securityResponse = await enforceSearchSecurity(session, planType);
+  if (securityResponse) return securityResponse;
 
   const exportCountry = request.nextUrl.searchParams.get("export_country")?.trim() ?? "";
   const importCountry = request.nextUrl.searchParams.get("import_country")?.trim() ?? "";

@@ -11,7 +11,7 @@ export async function getSession(): Promise<SessionPayload | null> {
 
   try {
     const { rows } = await pool.query(
-      "SELECT current_session_token, subscription_expires_at, subscription_status FROM users WHERE id = $1",
+      "SELECT current_session_token, subscription_expires_at, subscription_status, is_suspended FROM users WHERE id = $1",
       [payload.userId]
     );
 
@@ -26,6 +26,7 @@ export async function getSession(): Promise<SessionPayload | null> {
       const expiresAt = rows[0].subscription_expires_at;
       payload.isExpired = expiresAt ? new Date(expiresAt) < now : false;
       payload.subscriptionStatus = rows[0].subscription_status;
+      payload.isSuspended = rows[0].is_suspended;
     }
   } catch (error) {
     console.error("Session verification error:", error);

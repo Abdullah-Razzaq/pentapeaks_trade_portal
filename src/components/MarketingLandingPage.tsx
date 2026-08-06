@@ -24,8 +24,7 @@ export default function MarketingLandingPage() {
           </div>
           <nav className="hidden items-center gap-6 md:flex">
             <a href="#products" className="text-sm font-medium text-gray-600 hover:text-orange-600 transition-colors">Products</a>
-            <a href="#tariffs" className="text-sm font-medium text-gray-600 hover:text-orange-600 transition-colors">Tariffs</a>
-            <a href="#pricing" className="text-sm font-medium text-gray-600 hover:text-orange-600 transition-colors">Pricing</a>
+            <a href="#pricing" className="text-sm font-medium text-gray-600 hover:text-orange-600 transition-colors">Subscriptions</a>
           </nav>
           <div className="flex items-center gap-4">
             <Link
@@ -64,13 +63,6 @@ export default function MarketingLandingPage() {
                 >
                   Explore Portal <span className="ml-2 font-bold">-&gt;</span>
                 </Link>
-                <a
-                  href="mailto:cntct.pentapeaksintl@gmail.com"
-                  className="group flex w-full items-center justify-center rounded-full border border-gray-300 bg-white/70 px-8 py-3.5 text-base font-semibold text-gray-700 backdrop-blur-sm transition-all hover:bg-gray-100 hover:text-gray-900 sm:w-auto"
-                >
-                  <svg className="mr-2 h-5 w-5 text-gray-500 group-hover:text-orange-500 transition-colors" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
-                  Watch Demo
-                </a>
               </div>
             </div>
           </div>

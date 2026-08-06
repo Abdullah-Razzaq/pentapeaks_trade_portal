@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { pool } from "@/lib/db";
 import { getSession } from "@/lib/session";
+import { enforceSearchSecurity } from "@/lib/rateLimit";
 
 export async function GET(request: NextRequest) {
   const session = await getSession();
@@ -19,6 +20,9 @@ export async function GET(request: NextRequest) {
       planType = userRows[0].plan_type;
     }
   }
+
+  const securityResponse = await enforceSearchSecurity(session, planType);
+  if (securityResponse) return securityResponse;
 
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("query")?.trim() ?? "";

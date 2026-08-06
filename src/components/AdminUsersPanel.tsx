@@ -15,6 +15,7 @@ type User = {
   subscription_start_date: string | null;
   subscription_expires_at: string | null;
   batch: string | null;
+  is_suspended: boolean;
 };
 
 const getAvatarStyles = (name: string, role: string) => {
@@ -114,6 +115,24 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
       await loadUsers();
     } catch (err) {
       setListError(err instanceof Error ? err.message : "Failed to update user.");
+    } finally {
+      setTogglingId(null);
+    }
+  }
+
+  async function toggleSuspend(user: User) {
+    setTogglingId(user.id);
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isSuspended: !user.is_suspended }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to update user suspension status.");
+      await loadUsers();
+    } catch (err) {
+      setListError(err instanceof Error ? err.message : "Failed to update user suspension status.");
     } finally {
       setTogglingId(null);
     }
@@ -315,12 +334,18 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`rounded-full px-2.5 py-1 text-xs font-bold border ${user.is_active ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-rose-500/10 text-rose-400 border-rose-500/20"
-                          }`}
-                      >
-                        {user.is_active ? "ACTIVE" : "INACTIVE"}
-                      </span>
+                      {user.is_suspended ? (
+                        <span className="rounded-full px-2.5 py-1 text-xs font-bold border bg-red-500/10 text-red-500 border-red-500/20">
+                          SUSPENDED
+                        </span>
+                      ) : (
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-xs font-bold border ${user.is_active ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-rose-500/10 text-rose-400 border-rose-500/20"
+                            }`}
+                        >
+                          {user.is_active ? "ACTIVE" : "INACTIVE"}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-gray-600">
                       {new Date(user.created_at).toLocaleDateString("en-US", {
@@ -357,58 +382,76 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
                       })()}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {user.plan_type !== "pro" && (
-                          <button
-                            onClick={() => togglePlan(user, "pro")}
-                            disabled={togglingId === user.id || user.id === currentUserId}
-                            title={user.id === currentUserId ? "You cannot change your own plan." : "Switch to Pro"}
-                            className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-semibold text-gray-600 transition hover:border-purple-500/50 hover:bg-purple-500/10 hover:text-purple-400 disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center h-8 whitespace-nowrap"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mr-1"><path d="M12 2v20"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-                            Pro
-                          </button>
-                        )}
-                        <button
-                          onClick={() => toggleActive(user)}
-                          disabled={togglingId === user.id || user.id === currentUserId}
-                          title={user.id === currentUserId ? "You cannot change your own status." : (user.is_active ? "Deactivate" : "Activate")}
-                          className={`rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-semibold text-gray-600 transition disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center h-8 whitespace-nowrap ${user.is_active
-                              ? "hover:border-rose-500/50 hover:bg-rose-500/10 hover:text-rose-400"
-                              : "hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:text-emerald-400"
-                            }`}
-                        >
-                          {togglingId === user.id ? (
-                             <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                          ) : user.is_active ? (
-                            <><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mr-1"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg> Lock</>
-                          ) : (
-                            <><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mr-1"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg> Unlock</>
+                      {user.role === "admin" ? (
+                        <div className="flex items-center justify-end">
+                          <span className="rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-400 border border-gray-200">
+                            Protected (Admin)
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-end gap-2">
+                          {user.is_suspended && (
+                            <button
+                              onClick={() => toggleSuspend(user)}
+                              disabled={togglingId === user.id}
+                              title="Unsuspend User"
+                              className="rounded-lg border border-red-300 px-2.5 py-1.5 text-xs font-semibold text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center h-8 whitespace-nowrap"
+                            >
+                              Unsuspend
+                            </button>
                           )}
-                        </button>
-                        <button
-                          onClick={() => renew30Days(user)}
-                          disabled={togglingId === user.id || user.id === currentUserId}
-                          title={user.id === currentUserId ? "You cannot change your own status." : "Renew 30 Days"}
-                          className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 border border-gray-300 text-gray-600 hover:border-blue-500/50 hover:bg-blue-500/10 hover:text-blue-400 whitespace-nowrap flex items-center justify-center h-8`}
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mr-1"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
-                          Renew
-                        </button>
-                        <button
-                          onClick={() => setDeleteConfirmUser(user)}
-                          disabled={user.id === currentUserId || deletingId === user.id}
-                          title={user.id === currentUserId ? "You cannot delete your own account." : "Delete user permanently"}
-                          className="rounded-lg border border-gray-300 text-gray-500 transition hover:border-rose-500/50 hover:bg-rose-500/10 hover:text-rose-400 disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center w-8 h-8 shrink-0"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
-                            <path d="M3 6h18" />
-                            <path d="M19 6l-.867 12.142A2 2 0 0 1 16.138 20H7.862a2 2 0 0 1-1.995-1.858L5 6" />
-                            <path d="M10 11v5" />
-                            <path d="M14 11v5" />
-                          </svg>
-                        </button>
-                      </div>
+                          {user.plan_type !== "pro" && (
+                            <button
+                              onClick={() => togglePlan(user, "pro")}
+                              disabled={togglingId === user.id || user.id === currentUserId}
+                              title={user.id === currentUserId ? "You cannot change your own plan." : "Switch to Pro"}
+                              className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-semibold text-gray-600 transition hover:border-purple-500/50 hover:bg-purple-500/10 hover:text-purple-400 disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center h-8 whitespace-nowrap"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mr-1"><path d="M12 2v20"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                              Pro
+                            </button>
+                          )}
+                          <button
+                            onClick={() => toggleActive(user)}
+                            disabled={togglingId === user.id || user.id === currentUserId}
+                            title={user.id === currentUserId ? "You cannot change your own status." : (user.is_active ? "Deactivate" : "Activate")}
+                            className={`rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-semibold text-gray-600 transition disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center h-8 whitespace-nowrap ${user.is_active
+                                ? "hover:border-rose-500/50 hover:bg-rose-500/10 hover:text-rose-400"
+                                : "hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:text-emerald-400"
+                              }`}
+                          >
+                            {togglingId === user.id ? (
+                               <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                            ) : user.is_active ? (
+                              <><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mr-1"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg> Lock</>
+                            ) : (
+                              <><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mr-1"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg> Unlock</>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => renew30Days(user)}
+                            disabled={togglingId === user.id || user.id === currentUserId}
+                            title={user.id === currentUserId ? "You cannot change your own status." : "Renew 30 Days"}
+                            className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 border border-gray-300 text-gray-600 hover:border-blue-500/50 hover:bg-blue-500/10 hover:text-blue-400 whitespace-nowrap flex items-center justify-center h-8`}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mr-1"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                            Renew
+                          </button>
+                          <button
+                            onClick={() => setDeleteConfirmUser(user)}
+                            disabled={user.id === currentUserId || deletingId === user.id}
+                            title={user.id === currentUserId ? "You cannot delete your own account." : "Delete user permanently"}
+                            className="rounded-lg border border-gray-300 text-gray-500 transition hover:border-rose-500/50 hover:bg-rose-500/10 hover:text-rose-400 disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center w-8 h-8 shrink-0"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                              <path d="M3 6h18" />
+                              <path d="M19 6l-.867 12.142A2 2 0 0 1 16.138 20H7.862a2 2 0 0 1-1.995-1.858L5 6" />
+                              <path d="M10 11v5" />
+                              <path d="M14 11v5" />
+                            </svg>
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))

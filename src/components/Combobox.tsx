@@ -9,9 +9,10 @@ interface ComboboxProps {
   placeholder?: string;
   className?: string;
   onInputChange?: (value: string) => void;
+  disabled?: boolean;
 }
 
-export default function Combobox({ value, onChange, options, placeholder = "Select...", className = "", onInputChange }: ComboboxProps) {
+export default function Combobox({ value, onChange, options, placeholder = "Select...", className = "", onInputChange, disabled = false }: ComboboxProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [highlightedIndex, setHighlightedIndex] = useState(0);
@@ -56,9 +57,10 @@ export default function Combobox({ value, onChange, options, placeholder = "Sele
   };
 
   return (
-    <div className={`relative ${className}`} ref={containerRef}>
+    <div className={`relative ${className} ${disabled ? 'opacity-70 cursor-not-allowed' : ''}`} ref={containerRef}>
       <input
         type="text"
+        disabled={disabled}
         value={open ? search : value}
         onChange={(e) => {
           setSearch(e.target.value);

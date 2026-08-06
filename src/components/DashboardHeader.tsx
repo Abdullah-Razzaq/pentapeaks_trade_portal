@@ -22,7 +22,7 @@ const baseNavItems: NavItem[] = [
 export default function DashboardHeader({
   user,
 }: {
-  user: { name: string; role: "admin" | "user" };
+  user: { name: string; role: "admin" | "user"; planType?: string; expiresAt?: string; batch?: string };
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -110,6 +110,17 @@ export default function DashboardHeader({
 
           <div className="flex items-center gap-3 text-right">
             
+            {user.role !== "admin" && (user.planType === "pro" || user.planType === "premium") && (
+              <div className="hidden sm:flex items-center gap-1.5 bg-amber-500/10 border border-amber-400/30 text-amber-700 dark:text-amber-400 px-3 py-1 rounded-full text-xs font-medium shadow-sm mr-2">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                {user.expiresAt 
+                  ? `Pro Plan Renews: ${new Date(user.expiresAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}` 
+                  : "Active Pro Member"}
+              </div>
+            )}
+
             <div className="hidden sm:flex flex-col text-right">
               <p className="text-sm font-semibold text-gray-900">{user.name} &bull; <span className="text-emerald-400">Online</span></p>
             </div>
@@ -130,9 +141,9 @@ export default function DashboardHeader({
                       <p className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-sm ${user.role === 'admin' ? 'bg-purple-500/10 text-purple-400' : 'bg-gray-100 text-gray-600'}`}>
                         {user.role}
                       </p>
-                      {user.role !== 'admin' && (
+                      {user.role !== 'admin' && user.batch && (
                         <p className="text-[10px] font-bold uppercase tracking-wide bg-gray-100 text-gray-600 px-2 py-0.5 rounded-sm">
-                          Batch 25
+                          {user.batch}
                         </p>
                       )}
                     </div>

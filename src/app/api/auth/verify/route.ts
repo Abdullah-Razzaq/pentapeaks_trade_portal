@@ -1,47 +1,45 @@
 import { NextRequest, NextResponse } from "next/server";
 import { pool } from "@/lib/db";
 
-export async function GET(request: NextRequest) {
-  try {
-    const token = request.nextUrl.searchParams.get("token");
-    const email = request.nextUrl.searchParams.get("email");
+// GET removed: Link-based verification disabled
 
-    if (!token || !email) {
-      return NextResponse.redirect(new URL("/login?error=invalid_link", request.url));
+export async function POST(request: NextRequest) {
+  try {
+    const { code, email } = await request.json();
+    if (!code || !email) {
+      return NextResponse.json({error: "Missing code or email"}, {status: 400});
     }
 
     const normalizedEmail = email.toLowerCase();
 
-    // Query pending verifications
+    // Query pending verifications using the 6-digit prefix
     const { rows } = await pool.query(
-      "SELECT token, email, name, password_hash, batch, expires_at FROM pending_verifications WHERE token = $1 AND email = $2",
-      [token, normalizedEmail]
+      "SELECT token, email, name, password_hash, batch, expires_at FROM pending_verifications WHERE token LIKE $1 AND email = $2",
+      [`${code}_%`, normalizedEmail]
     );
 
     if (rows.length === 0) {
-      return NextResponse.redirect(new URL("/login?error=invalid_or_expired_link", request.url));
+      return NextResponse.json({error: "Invalid or expired verification code."}, {status: 400});
     }
 
     const pending = rows[0];
 
     if (new Date() > new Date(pending.expires_at)) {
-      await pool.query("DELETE FROM pending_verifications WHERE token = $1", [token]);
-      return NextResponse.redirect(new URL("/login?error=token_expired", request.url));
+      await pool.query("DELETE FROM pending_verifications WHERE token = $1", [pending.token]);
+      return NextResponse.json({error: "Verification code expired."}, {status: 400});
     }
 
-    // Set subscription expiry (3 days trial)
+    // Set subscription expiry (1 day trial)
     const startDate = new Date();
     const expireDate = new Date();
-    expireDate.setDate(startDate.getDate() + 3);
+    expireDate.setDate(startDate.getDate() + 1);
 
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
       
-      // Check if user somehow was created while this was pending
       const existingUser = await client.query("SELECT id FROM users WHERE email = $1", [normalizedEmail]);
       if (existingUser.rows.length === 0) {
-        // Insert into users
         await client.query(
           `INSERT INTO users (name, email, password_hash, role, is_active, subscription_expires_at, plan_type, batch)
            VALUES ($1, $2, $3, 'user', true, $4, 'trial', $5)`,
@@ -49,9 +47,7 @@ export async function GET(request: NextRequest) {
         );
       }
       
-      // Delete from pending
       await client.query("DELETE FROM pending_verifications WHERE email = $1", [normalizedEmail]);
-      
       await client.query('COMMIT');
     } catch (e) {
       await client.query('ROLLBACK');
@@ -60,10 +56,9 @@ export async function GET(request: NextRequest) {
       client.release();
     }
 
-    // Redirect to login with success message
-    return NextResponse.redirect(new URL("/login?verified=true", request.url));
+    return NextResponse.json({message: "Verified successfully"});
   } catch (error) {
-    console.error("Verify email GET error:", error);
-    return NextResponse.redirect(new URL("/login?error=internal_error", request.url));
+    console.error("Verify email POST error:", error);
+    return NextResponse.json({error: "Internal server error"}, {status: 500});
   }
 }

@@ -59,8 +59,9 @@ export async function POST(request: NextRequest) {
     // 2. Hash password
     const passwordHash = await hashPassword(password);
 
-    // Generate secure token for magic link
-    const verificationToken = crypto.randomBytes(32).toString('hex');
+    // Generate secure token for magic link and 6-digit code
+    const code = crypto.randomInt(100000, 999999).toString();
+    const verificationToken = `${code}_${crypto.randomBytes(32).toString('hex')}`;
     const verificationExpiresAt = new Date();
     verificationExpiresAt.setHours(verificationExpiresAt.getHours() + 24); // 24 hours validity
 

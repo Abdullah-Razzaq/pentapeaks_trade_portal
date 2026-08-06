@@ -11,6 +11,7 @@ export type SessionPayload = {
   sessionToken: string;
   isExpired?: boolean;
   subscriptionStatus?: string;
+  isSuspended?: boolean;
 };
 
 export const SESSION_COOKIE_NAME = "session";

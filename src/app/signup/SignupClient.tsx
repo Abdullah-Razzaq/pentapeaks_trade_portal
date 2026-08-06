@@ -13,7 +13,9 @@ export default function SignupClient() {
   const [batch, setBatch] = useState("Not a Student");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [maxBatch, setMaxBatch] = useState(15);
+  const [verificationCode, setVerificationCode] = useState("");
   
   // Step 2 state
   const [step, setStep] = useState<1 | 2>(1);
@@ -53,6 +55,32 @@ export default function SignupClient() {
         return;
       }
       setStep(2);
+    } catch {
+      setError("Unable to reach the server. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleVerifySubmit(event: FormEvent) {
+    event.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, code: verificationCode }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Invalid verification code.");
+        return;
+      }
+      setSuccessMsg("Email verified successfully! Your 1-day free trial has officially begun.");
+      setTimeout(() => {
+        router.push("/login?verified=true");
+      }, 1500);
     } catch {
       setError("Unable to reach the server. Please try again.");
     } finally {
@@ -161,22 +189,37 @@ export default function SignupClient() {
             <label htmlFor="password" className="mb-1 block text-sm font-medium text-gray-700">
               Password
             </label>
-            <input
-              id="password"
-              type="password"
-              required
-              minLength={6}
-              autoComplete="new-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 placeholder:text-gray-400"
-              placeholder="••••••••"
-            />
+            <div className="relative">
+              <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                required
+                minLength={6}
+                autoComplete="new-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className="w-full rounded-lg border border-gray-300 bg-gray-50 py-2 pl-3 pr-12 text-sm text-gray-900 outline-none transition focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 placeholder:text-gray-400"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                className="absolute inset-y-0 right-3 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"
+                onClick={(e) => { e.preventDefault(); setShowPassword(!showPassword); }}
+                tabIndex={-1}
+              >
+                {showPassword ? (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path></svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                )}
+              </button>
+            </div>
             <p className="mt-1 text-xs text-neutral-500">Minimum 6 characters</p>
           </div>
 
           <button
-            type="submit"
+            type="button"
+            onClick={handleSubmit}
             disabled={loading}
             className="flex w-full items-center justify-center rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-semibold text-black shadow-md transition-all hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
           >
@@ -204,10 +247,36 @@ export default function SignupClient() {
           </div>
           <h3 className="text-xl font-bold text-gray-900">Check Your Email</h3>
           <p className="text-sm text-gray-600">
-            We&apos;ve sent a verification link to <span className="font-semibold text-gray-800">{email}</span>. 
-            Click the link to activate your account.
+            Enter the 6-digit verification code sent to your email address.
           </p>
-          <div className="pt-4">
+          <div className="pt-2">
+            <form onSubmit={handleVerifySubmit} className="space-y-4">
+              <div>
+                <label htmlFor="code" className="mb-1 block text-sm font-medium text-gray-700">
+                  Verification Code
+                </label>
+                <input
+                  id="code"
+                  type="text"
+                  required
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-center tracking-widest text-lg font-mono text-gray-900 outline-none transition focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 placeholder:text-gray-300"
+                  placeholder="123456"
+                  maxLength={6}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleVerifySubmit}
+                disabled={loading || verificationCode.length !== 6}
+                className="flex w-full items-center justify-center rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-semibold text-black shadow-md transition-all hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {loading ? "Verifying..." : "Verify Code"}
+              </button>
+            </form>
+          </div>
+          <div className="pt-4 border-t border-gray-100">
             <Link href="/login" className="text-sm font-semibold text-amber-500 hover:text-amber-600 transition-colors">
               Return to Login
             </Link>
