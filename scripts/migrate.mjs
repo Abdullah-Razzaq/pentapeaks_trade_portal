@@ -1,7 +1,7 @@
 import { Pool } from 'pg';
 
-const oldConn = 'postgresql://neondb_owner:npg_9mudfpv1ayli@ep-solitary-frog-aypcxct9.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require';
-const newConn = 'postgresql://neondb_owner:npg_dFrDo29ZciEf@ep-fancy-frost-ax4474ej.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require';
+const oldConn = 'postgresql://neondb_owner:npg_9mudfpv1ayli@ep-solitary-frog-aypcxct9.c-5.us-east-2.aws.neon.tech/neondb?uselibpqcompat=true&sslmode=require';
+const newConn = 'postgresql://neondb_owner:npg_dFrDo29ZciEf@ep-fancy-frost-ax4474ej.c-4.us-east-2.aws.neon.tech/neondb?uselibpqcompat=true&sslmode=require';
 
 const oldPool = new Pool({ connectionString: oldConn, ssl: { rejectUnauthorized: false } });
 const newPool = new Pool({ connectionString: newConn, ssl: { rejectUnauthorized: false } });

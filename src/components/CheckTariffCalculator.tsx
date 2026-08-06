@@ -107,7 +107,7 @@ export default function CheckTariffCalculator() {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-4xl rounded-2xl bg-white shadow-sm border border-gray-200 p-8 flex items-center justify-center min-h-[400px]">
+      <div className="mx-auto rounded-2xl bg-white/90 backdrop-blur-md shadow-lg border border-gray-200 p-8 flex items-center justify-center min-h-[400px]">
         <div className="animate-pulse flex flex-col items-center">
           <div className="h-8 w-64 bg-gray-200 rounded mb-4"></div>
           <div className="h-4 w-32 bg-gray-200 rounded"></div>
@@ -119,9 +119,7 @@ export default function CheckTariffCalculator() {
   const isLocked = planType !== 'premium';
 
   return (
-    <div className="mx-auto max-w-4xl rounded-2xl bg-white shadow-sm border border-gray-200 p-8">
-      <h2 className="text-xl font-semibold text-gray-900 mb-6">Calculate Tariff & Duty Rates</h2>
-      
+    <div className="mx-auto rounded-2xl bg-white/90 backdrop-blur-md shadow-lg border border-gray-200 p-8">
       <div className="relative">
         {isLocked && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/60 backdrop-blur-[2px] rounded-xl">

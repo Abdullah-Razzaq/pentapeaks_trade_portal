@@ -62,30 +62,25 @@ export default function HsCodeExplorer() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900">HS Code Search</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Search and filter the harmonized system directory by code or description.
-        </p>
-      </div>
+
 
       <div className="mb-6 flex gap-3">
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search by HS code or description..."
-          className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100 max-w-lg"
+          className="w-full rounded-xl border border-gray-200 bg-white/90 backdrop-blur-md px-4 py-2.5 text-sm text-gray-900 shadow-sm outline-none transition hover:border-amber-500 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 max-w-lg"
         />
         <button
           onClick={() => { setQuery(""); setDebouncedQuery(""); setPage(1); }}
-          className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-50 disabled:opacity-50"
+          className="rounded-xl border border-gray-200 bg-white/80 backdrop-blur-md px-4 py-2.5 text-sm font-medium text-gray-600 shadow-sm transition hover:bg-gray-50 hover:border-amber-500 focus:ring-4 focus:ring-amber-500/20 disabled:opacity-50"
           disabled={!query}
         >
           Clear Search
         </button>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white/90 backdrop-blur-md shadow-lg">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-orange-50 text-xs font-semibold uppercase tracking-wide text-orange-700">

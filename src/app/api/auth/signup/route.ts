@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { pool } from "@/lib/db";
 import { hashPassword } from "@/lib/auth";
+import { sendVerificationEmail } from "@/lib/email";
+import crypto from "crypto";
 
 const signupSchema = z.object({
   name: z.string().trim().min(1, "Name is required."),
@@ -57,20 +59,33 @@ export async function POST(request: NextRequest) {
     // 2. Hash password
     const passwordHash = await hashPassword(password);
 
-    // 3. Set subscription expiry (7 days trial)
+    // 3. Set subscription expiry (3 days trial)
     const startDate = new Date();
     const expireDate = new Date();
-    expireDate.setDate(startDate.getDate() + 7);
+    expireDate.setDate(startDate.getDate() + 3);
 
-    // 4. Insert new user
+    // Generate 6-digit OTP
+    const verificationCode = crypto.randomInt(100000, 999999).toString();
+    const verificationExpiresAt = new Date();
+    verificationExpiresAt.setMinutes(verificationExpiresAt.getMinutes() + 15);
+
+    // 4. Insert new user (inactive until verified)
     const { rows } = await pool.query(
-      `INSERT INTO users (name, email, password_hash, role, is_active, subscription_expires_at, plan_type, batch)
-       VALUES ($1, $2, $3, 'user', true, $4, 'trial', $5)
+      `INSERT INTO users (name, email, password_hash, role, is_active, subscription_expires_at, plan_type, batch, verification_code, verification_code_expires_at)
+       VALUES ($1, $2, $3, 'user', false, $4, 'trial', $5, $6, $7)
        RETURNING id, name, email, role, is_active, subscription_expires_at, plan_type, batch, created_at`,
-      [name, normalizedEmail, passwordHash, expireDate, batch]
+      [name, normalizedEmail, passwordHash, expireDate, batch, verificationCode, verificationExpiresAt]
     );
 
-    return NextResponse.json({ user: rows[0] }, { status: 201 });
+    // 5. Send Email
+    try {
+      await sendVerificationEmail(normalizedEmail, verificationCode);
+    } catch (emailError) {
+      console.error("Failed to send verification email:", emailError);
+      // We could delete the user here or leave them inactive and let them resend
+    }
+
+    return NextResponse.json({ user: rows[0], message: "Verification code sent." }, { status: 201 });
   } catch (error) {
     console.error("Signup error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

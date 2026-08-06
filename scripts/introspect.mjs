@@ -1,7 +1,7 @@
 import { Pool } from 'pg';
 import fs from 'fs';
 
-const connectionString = 'postgresql://neondb_owner:npg_9mudfpv1ayli@ep-solitary-frog-aypcxct9.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require';
+const connectionString = 'postgresql://neondb_owner:npg_9mudfpv1ayli@ep-solitary-frog-aypcxct9.c-5.us-east-2.aws.neon.tech/neondb?uselibpqcompat=true&sslmode=require';
 
 const pool = new Pool({
   connectionString,

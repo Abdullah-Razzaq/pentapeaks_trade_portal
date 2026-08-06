@@ -18,7 +18,7 @@ export async function GET() {
   }
 
   const { rows } = await pool.query(
-    `SELECT id, name, email, role, is_active, plan_type, subscription_expires_at, created_at, batch
+    `SELECT id, name, email, role, is_active, plan_type, subscription_start_date, subscription_expires_at, created_at, batch
      FROM users
      ORDER BY created_at DESC`
   );

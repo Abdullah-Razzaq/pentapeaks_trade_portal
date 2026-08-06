@@ -335,8 +335,33 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
             styles: { fontSize: 7 },
             headStyles: { fillColor: [30, 41, 59] },
             didDrawPage: (data) => {
+              // Watermark
+              doc.saveGraphicsState();
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              doc.setGState(new (doc as any).GState({ opacity: 0.12 }));
+              doc.setFontSize(35);
+              doc.setTextColor(150, 150, 150);
+              doc.setFont("helvetica", "bold");
+              const pageWidth = doc.internal.pageSize.getWidth();
+              const pageHeight = doc.internal.pageSize.getHeight();
+              
+              [0.25, 0.5, 0.75].forEach(yPos => {
+                [0.25, 0.75].forEach(xPos => {
+                  doc.text(
+                    "PENTAPEAKS INTERNATIONAL",
+                    pageWidth * xPos,
+                    pageHeight * yPos,
+                    { angle: 45, align: "center" }
+                  );
+                });
+              });
+              
+              doc.restoreGraphicsState();
+
+              // Footer
               doc.setFontSize(8);
               doc.setTextColor(128, 128, 128);
+              doc.setFont("helvetica", "normal");
               doc.text(
                 "© Pentapeaks International",
                 data.settings.margin.left,
@@ -345,6 +370,32 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
             }
           });
         } else {
+          // Watermark
+          doc.saveGraphicsState();
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          doc.setGState(new (doc as any).GState({ opacity: 0.12 }));
+          doc.setFontSize(35);
+          doc.setTextColor(150, 150, 150);
+          doc.setFont("helvetica", "bold");
+          const pageWidth = doc.internal.pageSize.getWidth();
+          const pageHeight = doc.internal.pageSize.getHeight();
+          
+          [0.25, 0.5, 0.75].forEach(yPos => {
+            [0.25, 0.75].forEach(xPos => {
+              doc.text(
+                "PENTAPEAKS INTERNATIONAL",
+                pageWidth * xPos,
+                pageHeight * yPos,
+                { angle: 45, align: "center" }
+              );
+            });
+          });
+          
+          doc.restoreGraphicsState();
+
+          doc.setFontSize(12);
+          doc.setTextColor(0, 0, 0);
+          doc.setFont("helvetica", "normal");
           doc.text("No shipments found.", 14, 25);
           doc.setFontSize(8);
           doc.setTextColor(128, 128, 128);
@@ -410,17 +461,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
         <p className="text-sm text-gray-400">Generated on {new Date().toLocaleDateString()}</p>
       </div>
 
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between no-print">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">
-            {mode === "buyer" ? "Find Buyer" : "Find Supplier"}
-          </h1>
-          <p className="mt-1 text-sm text-gray-500">
-            {mode === "buyer"
-              ? "Search individual shipment records to find importers who bought specific products."
-              : "Search individual shipment records to find exporters supplying specific products."}
-          </p>
-        </div>
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-end no-print">
         <div className="flex flex-col sm:flex-row items-end sm:items-center gap-4">
 
           
@@ -521,7 +562,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
               setPage(1);
             }}
             placeholder={isCompanyFilterDisabled ? "Filter locked (Upgrade to Pro)" : "Filter by company name..."}
-            className={`w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100 ${
+            className={`w-full rounded-xl border border-gray-200 bg-white/90 backdrop-blur-md px-4 py-2.5 text-sm text-gray-900 shadow-sm outline-none transition hover:border-amber-500 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 ${
               isCompanyFilterDisabled ? "cursor-not-allowed bg-gray-50 text-gray-400" : ""
             }`}
           />
@@ -545,7 +586,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
             setPage(1);
           }}
           placeholder="Filter by product / description..."
-          className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100 sm:w-72"
+          className="w-full rounded-xl border border-gray-200 bg-white/90 backdrop-blur-md px-4 py-2.5 text-sm text-gray-900 shadow-sm outline-none transition hover:border-amber-500 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 sm:w-72"
         />
         <Combobox
           value={destinationCountry}
@@ -565,10 +606,10 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
           }}
           disabled={isSortingDisabled}
           title={isSortingDisabled ? "Sorting is available for Pro and Premium users." : "Sort by"}
-          className={`w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none transition sm:w-64 ${
+          className={`w-full rounded-xl border border-gray-200 shadow-sm px-3 py-2.5 text-sm outline-none transition hover:border-amber-500 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 sm:w-64 ${
             isSortingDisabled 
               ? "bg-gray-50 text-gray-500 cursor-not-allowed opacity-80" 
-              : "bg-white text-gray-900 focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+              : "bg-white/90 backdrop-blur-md text-gray-900"
           }`}
         >
           <option value="date_asc">Sort: Date (Oldest to Newest)</option>

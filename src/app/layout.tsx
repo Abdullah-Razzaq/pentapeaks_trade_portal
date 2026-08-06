@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import CopyRestriction from "@/components/CopyRestriction";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Pentapeaks Trade Portal',
+  title: 'PentaPeaks International | Trade Intelligence Portal',
   description: 'International Trade & Tariff Intelligence Portal',
   icons: {
     icon: '/logo.jpeg',
@@ -32,7 +33,10 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col select-none">
+        <CopyRestriction />
+        {children}
+      </body>
     </html>
   );
 }

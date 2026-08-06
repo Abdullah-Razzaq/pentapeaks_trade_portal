@@ -31,8 +31,9 @@ export async function POST(request: NextRequest) {
     role: "admin" | "user";
     is_active: boolean;
     last_activated_at: string;
+    verification_code: string | null;
   }>(
-    `SELECT id, name, email, password_hash, role, is_active, last_activated_at
+    `SELECT id, name, email, password_hash, role, is_active, last_activated_at, verification_code
      FROM users WHERE email = $1 LIMIT 1`,
     [email.toLowerCase()]
   );
@@ -49,6 +50,12 @@ export async function POST(request: NextRequest) {
   }
 
   if (!user.is_active) {
+    if (user.verification_code) {
+      return NextResponse.json(
+        { error: "Please verify your email address to activate your account." },
+        { status: 403 }
+      );
+    }
     return NextResponse.json(
       { error: "Your 30-day subscription has expired. Please pay your dues to reactivate your account and restore full access to Pentapeaks Trade Portal." },
       { status: 403 }
