@@ -14,6 +14,34 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Please select a valid product category." }, { status: 400 });
   }
 
+  let planType = "trial";
+  const isAdmin = session.role === "admin";
+  let proProducts: string[] = [];
+  if (!isAdmin) {
+    const { rows: userRows } = await pool.query(
+      `SELECT plan_type, pro_products FROM users WHERE id = $1`,
+      [session.userId]
+    );
+    if (userRows.length > 0) {
+      planType = userRows[0].plan_type;
+      proProducts = userRows[0].pro_products || [];
+    }
+  }
+
+  if (!isAdmin && planType === "pro") {
+    const keywords = proProducts.map(p => p.toUpperCase());
+    const { rows } = await pool.query(
+      `SELECT 1 FROM export_shipments
+       WHERE UPPER(REGEXP_REPLACE(description, '^[^A-Za-z]*([A-Za-z]+).*$', '\\1')) = ANY($1::text[])
+         AND REPLACE(to_char(pct, 'FM0000.0000'), '.', '') LIKE REPLACE($2, '.', '') || '%'
+       LIMIT 1`,
+      [keywords, hsCode]
+    );
+    if (rows.length === 0) {
+      return NextResponse.json({ error: "Access Restricted: You can only check status for your 5 monitored products for this month." }, { status: 403 });
+    }
+  }
+
   const [summary, topBuyers, topSuppliers, topCountries] = await Promise.all([
     pool.query(
       `SELECT

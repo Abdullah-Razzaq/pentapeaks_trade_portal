@@ -8,12 +8,12 @@ export type RateLimitResult = {
 const requestLog = new Map<string, number[]>();
 const violationLog = new Map<string, number[]>();
 
-const RATE_LIMIT_MAX_REQUESTS = 15;
+
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
 const VIOLATION_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 const MAX_VIOLATIONS = 3;
 
-export function checkRateLimit(identifier: string): RateLimitResult {
+export function checkRateLimit(identifier: string, limit: number = 15): RateLimitResult {
   const now = Date.now();
   
   // 1. Clean up old requests outside the 1 minute window
@@ -38,7 +38,7 @@ export function checkRateLimit(identifier: string): RateLimitResult {
   }
   
   // 4. Enforce normal rate limiting
-  if (validRequests.length >= RATE_LIMIT_MAX_REQUESTS) {
+  if (validRequests.length >= limit) {
     // Record a violation since they exceeded the limit
     validViolations.push(now);
     violationLog.set(identifier, validViolations);
@@ -81,7 +81,9 @@ export async function enforceSearchSecurity(session: SessionPayload, planType: s
   if (session.role === "admin") return null;
 
   // 1. Rate limiting
-  const rateLimit = checkRateLimit(`user_${session.userId}`);
+  // Increased rate limit to prevent 429 during normal pagination for all users
+  const limit = planType === "pro" ? 300 : 180;
+  const rateLimit = checkRateLimit(`user_${session.userId}`, limit);
   if (!rateLimit.success) {
     if (rateLimit.isSuspended) {
       await pool.query("UPDATE users SET is_suspended = true WHERE id = $1", [session.userId]);
@@ -89,32 +91,8 @@ export async function enforceSearchSecurity(session: SessionPayload, planType: s
     return NextResponse.json({ error: rateLimit.message }, { status: rateLimit.isSuspended ? 403 : 429 });
   }
 
-  // 2. Trial search quota (20 per day)
-  if (planType === "trial") {
-    const { rows } = await pool.query(
-      "SELECT daily_search_count, last_search_reset FROM users WHERE id = $1",
-      [session.userId]
-    );
-    if (rows.length > 0) {
-      const user = rows[0];
-      const now = new Date();
-      let searchCount = user.daily_search_count;
-      const lastReset = new Date(user.last_search_reset);
-      
-      // Reset quota if 24 hours have passed
-      if (now.getTime() - lastReset.getTime() > 24 * 60 * 60 * 1000) {
-        searchCount = 0;
-        await pool.query("UPDATE users SET daily_search_count = 0, last_search_reset = CURRENT_TIMESTAMP WHERE id = $1", [session.userId]);
-      }
-      
-      if (searchCount >= 20) {
-        return NextResponse.json({ error: "Daily search quota exceeded (20/20). Upgrade to Pro for unlimited access." }, { status: 429 });
-      }
-      
-      // Increment search count
-      await pool.query("UPDATE users SET daily_search_count = daily_search_count + 1 WHERE id = $1", [session.userId]);
-    }
-  }
+  // The 20-page limit for trial users is now handled entirely on the frontend
+  // to avoid backend 429 errors during rapid pagination.
 
   return null;
 }

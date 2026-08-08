@@ -28,12 +28,24 @@ export default function DashboardHeader({
   const router = useRouter();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [alertsCount, setAlertsCount] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const navItems =
     user.role === "admin"
-      ? [...baseNavItems, { href: "/dashboard/admin/users", label: "Manage Users" }]
+      ? [...baseNavItems, { href: "/dashboard/admin/users", label: "Manage Users" }, { href: "/dashboard/admin/subscriptions", label: "Our Subscriptions" }]
       : baseNavItems;
+
+  useEffect(() => {
+    if (user.role === "admin") {
+      fetch("/api/admin/subscriptions/alerts")
+        .then(res => res.json())
+        .then(data => {
+          if (data.alerts) setAlertsCount(data.alerts.length);
+        })
+        .catch(console.error);
+    }
+  }, [user.role]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -111,7 +123,7 @@ export default function DashboardHeader({
           <div className="flex items-center gap-3 text-right">
             
             {user.role !== "admin" && (user.planType === "pro" || user.planType === "premium") && (
-              <div className="hidden sm:flex items-center gap-1.5 bg-amber-500/10 border border-amber-400/30 text-amber-700 dark:text-amber-400 px-3 py-1 rounded-full text-xs font-medium shadow-sm mr-2">
+              <div className="hidden sm:flex items-center gap-1.5 bg-amber-500/20 border border-amber-600/40 text-amber-950 px-3 py-1 rounded-full text-xs font-bold shadow-sm mr-2">
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
@@ -125,6 +137,20 @@ export default function DashboardHeader({
               <p className="text-sm font-semibold text-gray-900">{user.name} &bull; <span className="text-emerald-400">Online</span></p>
             </div>
             
+            {user.role === "admin" && (
+              <Link href="/dashboard/admin/subscriptions" className="relative p-2 text-gray-400 hover:text-amber-500 transition-colors">
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                {alertsCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                  </span>
+                )}
+              </Link>
+            )}
+
             <div className="relative" ref={dropdownRef}>
               <div 
                 className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-sm font-bold text-gray-900 border border-gray-300 cursor-pointer hover:border-amber-500 transition-colors"

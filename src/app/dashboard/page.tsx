@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 
 import { pool } from "@/lib/db";
+import ProProductSelectionModal from "@/components/ProProductSelectionModal";
+import AdminSubscriptionAlerts from "@/components/AdminSubscriptionAlerts";
 
 export default async function DashboardPage() {
   const session = await getSession();
@@ -11,15 +13,23 @@ export default async function DashboardPage() {
   }
 
   const { rows } = await pool.query(
-    "SELECT plan_type FROM users WHERE id = $1",
+    "SELECT plan_type, pro_products FROM users WHERE id = $1",
     [session.userId]
   );
   const planType = rows[0]?.plan_type || "trial";
+  const proProducts = rows[0]?.pro_products || [];
 
 
 
   return (
     <div className="mx-auto max-w-7xl pb-16">
+      {planType === "pro" && proProducts.length < 5 && (
+        <ProProductSelectionModal />
+      )}
+      
+      {session.role === "admin" && (
+        <AdminSubscriptionAlerts />
+      )}
 
       {/* Header & Welcome */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
@@ -91,6 +101,29 @@ export default async function DashboardPage() {
 
         {/* Main Content Column */}
         <div className="lg:col-span-2">
+
+          {planType === "pro" && proProducts.length > 0 && (
+            <div className="mb-8">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Your Monitored Products For This Month</h3>
+              <div className="flex flex-wrap gap-3">
+                {proProducts.map((p: string) => {
+                  return (
+                    <Link
+                      key={p}
+                      href={`/dashboard/find-buyer?product=${encodeURIComponent(p)}`}
+                      className="inline-flex items-center gap-2 rounded-xl bg-purple-50 px-4 py-2 text-sm font-medium text-purple-700 border border-purple-200 shadow-sm hover:bg-purple-100 hover:shadow-md transition-all group"
+                      title={p}
+                    >
+                      <span className="font-bold">{p}</span>
+                      <svg className="h-4 w-4 text-purple-400 group-hover:text-purple-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                      </svg>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Trade Tools Grid */}
           <div>

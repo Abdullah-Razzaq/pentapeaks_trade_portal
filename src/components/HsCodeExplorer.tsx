@@ -27,7 +27,7 @@ export default function HsCodeExplorer() {
     const handler = setTimeout(() => {
       setDebouncedQuery(query);
       setPage(1); // Reset to first page on new query
-    }, 300);
+    }, 500);
     return () => clearTimeout(handler);
   }, [query]);
 

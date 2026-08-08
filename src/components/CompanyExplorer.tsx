@@ -100,6 +100,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
   const [tertiaryOptions, setTertiaryOptions] = useState<string[]>([]);
   const [hsCodeFilter, setHsCodeFilter] = useState("");
   const [selectedRow, setSelectedRow] = useState<Row | null>(null);
+  const [showUpgradeBanner, setShowUpgradeBanner] = useState(false);
 
   const [status, setStatus] = useState<ProductStatus | null>(null);
   const [statusLoading, setStatusLoading] = useState(false);
@@ -123,9 +124,17 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
         
         const res = await fetch(`${endpoint}?${params.toString()}`);
         if (!res.ok) {
-          const errorText = await res.text();
+          const errorData = await res.json().catch(() => null);
+          if (res.status === 403 && errorData?.error === "ACCESS_RESTRICTED") {
+            setRows([]);
+            setTotal(0);
+            alert("Access Restricted: You can only search for your 5 monitored products for this month.");
+            return;
+          }
+          
+          const errorText = errorData?.error || `Server returned ${res.status}: ${res.statusText}`;
           console.error("API Error Response:", errorText);
-          throw new Error(`Server returned ${res.status}: ${res.statusText}`);
+          throw new Error(errorText);
         }
         const data = await res.json();
         setRows(data.results as Row[]);
@@ -140,7 +149,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
   );
 
   useEffect(() => {
-    const handle = setTimeout(() => load(query, product, destinationCountry, hsCodeFilter, sort, page), 300);
+    const handle = setTimeout(() => load(query, product, destinationCountry, hsCodeFilter, sort, page), 500);
     return () => clearTimeout(handle);
   }, [query, product, destinationCountry, hsCodeFilter, sort, page, load]);
 
@@ -198,9 +207,14 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
     try {
       const res = await fetch(`/api/trade/product-status?hs_code=${hsPrefix}`);
       if (!res.ok) {
-        const errorText = await res.text();
-        console.error("API Error Response:", errorText);
-        throw new Error(`Server returned ${res.status}: ${res.statusText}`);
+        let errorMsg = `Server returned ${res.status}: ${res.statusText}`;
+        try {
+          const errorData = await res.json();
+          if (errorData.error) errorMsg = errorData.error;
+        } catch {
+          // fallback to default message
+        }
+        throw new Error(errorMsg);
       }
       const data = await res.json();
       setStatus(data as ProductStatus);
@@ -1024,7 +1038,13 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
               Page {page} of {totalPages || 1}
             </span>
             <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              onClick={() => {
+                if (isTrial && page >= 20) {
+                  setShowUpgradeBanner(true);
+                  return;
+                }
+                setPage((p) => Math.min(totalPages, p + 1));
+              }}
               disabled={page >= totalPages || loading}
               className="rounded-lg border border-gray-200 px-3 py-1.5 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -1194,6 +1214,27 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
               >
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upgrade Banner Modal */}
+      {showUpgradeBanner && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm no-print">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 text-center">
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Page Limit Reached</h3>
+            <p className="text-gray-600 mb-6">Trial users can only view up to 20 pages. Upgrade to Pro to unlock unlimited data exploration.</p>
+            <div className="flex gap-3 justify-center">
+              <button 
+                onClick={() => setShowUpgradeBanner(false)}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition"
+              >
+                Close
+              </button>
+              <a href="/dashboard#pro-card" className="px-4 py-2 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition shadow-sm">
+                Upgrade Now
+              </a>
             </div>
           </div>
         </div>

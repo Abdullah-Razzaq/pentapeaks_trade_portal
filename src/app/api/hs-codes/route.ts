@@ -5,13 +5,9 @@ import { enforceSearchSecurity } from "@/lib/rateLimit";
 
 export async function GET(request: NextRequest) {
   const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   let planType = "trial";
-  const isAdmin = session.role === "admin";
-  if (!isAdmin) {
+  const isAdmin = session?.role === "admin";
+  if (session && !isAdmin) {
     const { rows: userRows } = await pool.query(
       `SELECT plan_type FROM users WHERE id = $1`,
       [session.userId]
@@ -20,9 +16,6 @@ export async function GET(request: NextRequest) {
       planType = userRows[0].plan_type;
     }
   }
-
-  const securityResponse = await enforceSearchSecurity(session, planType);
-  if (securityResponse) return securityResponse;
 
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("query")?.trim() ?? "";

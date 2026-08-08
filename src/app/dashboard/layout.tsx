@@ -3,6 +3,7 @@ import { getSession } from "@/lib/session";
 import DashboardHeader from "@/components/DashboardHeader";
 import Footer from "@/components/Footer";
 import { pool } from "@/lib/db";
+import CopyProtection from "@/components/CopyProtection";
 
 export default async function DashboardLayout({
   children,
@@ -31,6 +32,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50 text-gray-900">
+      <CopyProtection isAdmin={session.role === "admin"} />
       {planType === "trial" && session.role !== "admin" && (
         <div className="w-full bg-amber-500/15 border-b border-amber-500/30 text-amber-900 px-4 py-2 text-center text-sm font-semibold shadow-sm backdrop-blur-sm relative z-50">
           Your 1-day free trial is active. Upgrade to Pro to unlock unlimited access and prevent loss of access.

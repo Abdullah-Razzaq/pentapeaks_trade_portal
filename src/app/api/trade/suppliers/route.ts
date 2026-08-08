@@ -21,23 +21,25 @@ export async function GET(request: NextRequest) {
 
   const isAdmin = session.role === "admin";
   let planType = "trial";
-  let proSearchedProducts: string[] = [];
-  let proQuotaResetDate: Date | null = null;
+  let proProducts: string[] = [];
   
   if (!isAdmin) {
     const { rows: userRows } = await pool.query(
-      `SELECT plan_type, pro_searched_products, pro_quota_reset_date FROM users WHERE id = $1`,
+      `SELECT plan_type, pro_products FROM users WHERE id = $1`,
       [session.userId]
     );
     if (userRows.length > 0) {
       planType = userRows[0].plan_type;
-      proSearchedProducts = userRows[0].pro_searched_products || [];
-      proQuotaResetDate = userRows[0].pro_quota_reset_date;
+      proProducts = userRows[0].pro_products || [];
     }
   }
 
   const securityResponse = await enforceSearchSecurity(session, planType);
   if (securityResponse) return securityResponse;
+
+  if (!isAdmin && planType === "pro" && proProducts.length < 5) {
+    return NextResponse.json({ error: "Please select your 5 products on the dashboard first." }, { status: 403 });
+  }
 
   let company = request.nextUrl.searchParams.get("company")?.trim() ?? "";
   let destination_country = request.nextUrl.searchParams.get("destination_country")?.trim() ?? "";
@@ -59,46 +61,23 @@ export async function GET(request: NextRequest) {
     sort = "date_asc";
   }
 
-  // Enforce Pro Quota
-  if (!isAdmin && planType === "pro" && (product || hs_code)) {
-    const queryTerm = product || hs_code; // Usually one is provided per search field
-    
-    // Auto-reset logic if it's been more than 30 days
-    if (proQuotaResetDate) {
-      const daysSinceReset = (new Date().getTime() - new Date(proQuotaResetDate).getTime()) / (1000 * 3600 * 24);
-      if (daysSinceReset >= 30) {
-        proSearchedProducts = [];
-        await pool.query(
-          "UPDATE users SET pro_searched_products = '[]'::jsonb, pro_quota_reset_date = CURRENT_TIMESTAMP WHERE id = $1",
-          [session.userId]
-        );
-      }
-    } else {
-      // If no reset date is set but user is searching, set it now
-      await pool.query(
-        "UPDATE users SET pro_quota_reset_date = CURRENT_TIMESTAMP WHERE id = $1",
-        [session.userId]
+  if (!isAdmin && planType === "pro" && product) {
+    const isAllowed = proProducts.some((p: string) => p.toLowerCase() === product.toLowerCase());
+    if (!isAllowed) {
+      return NextResponse.json(
+        { error: "ACCESS_RESTRICTED", allowed_products: proProducts },
+        { status: 403 }
       );
     }
+  }
 
-    const searchTermLower = queryTerm.toLowerCase();
-    const alreadySearched = proSearchedProducts.some(p => p.toLowerCase() === searchTermLower);
-    
-    if (!alreadySearched) {
-      if (proSearchedProducts.length >= 5) {
-        return NextResponse.json(
-          { error: "Pro plan quota reached. You can view data for your 5 chosen products this month." },
-          { status: 403 }
-        );
-      } else {
-        // Append new search term
-        proSearchedProducts.push(queryTerm);
-        await pool.query(
-          "UPDATE users SET pro_searched_products = $1::jsonb WHERE id = $2",
-          [JSON.stringify(proSearchedProducts), session.userId]
-        );
-      }
-    }
+  let proKeywordSearch: string[] | null = null;
+  let proRegexSearch: string[] | null = null;
+
+  if (!isAdmin && planType === "pro" && proProducts.length > 0) {
+    const keywords = proProducts.map((p: string) => p.toUpperCase());
+    proKeywordSearch = keywords.map((k: string) => `%${k}%`);
+    proRegexSearch = keywords.map((k: string) => `\\m${k}\\M`);
   }
 
   const page = Math.max(1, Number(request.nextUrl.searchParams.get("page")) || 1);
@@ -120,8 +99,9 @@ export async function GET(request: NextRequest) {
        AND ($1 = '' OR exporter ILIKE '%' || $1 || '%')
        AND ($2 = '' OR description ILIKE '%' || $2 || '%')
        AND ($3 = '' OR origin = $3)
-       AND ($4 = '' OR REPLACE(to_char(pct, 'FM0000.0000'), '.', '') LIKE REPLACE($4, '.', '') || '%')`,
-    [company, product, destination_country, hs_code]
+       AND ($4 = '' OR REPLACE(to_char(pct, 'FM0000.0000'), '.', '') LIKE REPLACE($4, '.', '') || '%')
+       AND ($5::text[] IS NULL OR (description ~* ANY($6::text[]) OR UPPER(description) ILIKE ANY($5::text[])))`,
+    [company, product, destination_country, hs_code, proKeywordSearch, proRegexSearch]
   );
   
   let total = parseInt(countResult.rows[0].count, 10);
@@ -141,8 +121,25 @@ export async function GET(request: NextRequest) {
       actualLimit = total - offset;
     }
   }
+  interface ExportRow {
+    id: number;
+    company: string;
+    ntn: string;
+    email: string;
+    phone: string;
+    address: string;
+    website: string;
+    country: string;
+    counterparty: string;
+    pct: string;
+    qty: string;
+    unit: string;
+    description: string;
+    value_pkr: number;
+    shipment_date: string;
+  }
 
-  let rows: any[] = [];
+  let rows: ExportRow[] = [];
   if (actualLimit > 0) {
     const { rows: dataRows } = await pool.query(
       `SELECT
@@ -167,9 +164,10 @@ export async function GET(request: NextRequest) {
          AND ($2 = '' OR description ILIKE '%' || $2 || '%')
          AND ($3 = '' OR origin = $3)
          AND ($4 = '' OR REPLACE(to_char(pct, 'FM0000.0000'), '.', '') LIKE REPLACE($4, '.', '') || '%')
+         AND ($5::text[] IS NULL OR (description ~* ANY($6::text[]) OR UPPER(description) ILIKE ANY($5::text[])))
        ${orderClause}
-       LIMIT $5 OFFSET $6`,
-      [company, product, destination_country, hs_code, actualLimit, offset]
+       LIMIT $7 OFFSET $8`,
+      [company, product, destination_country, hs_code, proKeywordSearch, proRegexSearch, actualLimit, offset]
     );
     rows = dataRows;
   }
