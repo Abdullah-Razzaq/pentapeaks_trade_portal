@@ -1,16 +1,15 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { pool } from "@/lib/db";
 import { getSession } from "@/lib/session";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const session = await getSession();
     if (!session || session.role !== "admin") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // CURRENT_DATE >= alert_date AND CURRENT_DATE < renew_date ? 
-    // The requirement says: CURRENT_DATE >= alert_date. We should also check is_active = true.
+    // The requirement says: alert when subscription is at its 28-day mark.
     const { rows } = await pool.query(
       `SELECT * FROM admin_subscriptions 
        WHERE is_active = true AND CURRENT_DATE >= alert_date`

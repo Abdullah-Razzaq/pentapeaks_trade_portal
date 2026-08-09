@@ -10,6 +10,7 @@ export default function SignupClient() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [businessRole, setBusinessRole] = useState("Buyer");
   const [batch, setBatch] = useState("Not a Student");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -47,7 +48,7 @@ export default function SignupClient() {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password, batch }),
+        body: JSON.stringify({ name, email, password, batch, business_role: businessRole }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -182,6 +183,22 @@ export default function SignupClient() {
               {batchOptions.map(opt => (
                 <option key={opt} value={opt}>{opt}</option>
               ))}
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="businessRole" className="mb-1 block text-sm font-medium text-gray-700">
+              Your Role
+            </label>
+            <select
+              id="businessRole"
+              value={businessRole}
+              onChange={(event) => setBusinessRole(event.target.value)}
+              className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 [&>option]:bg-white"
+            >
+              <option value="Manufacturer">Manufacturer</option>
+              <option value="Seller">Seller</option>
+              <option value="Buyer">Buyer</option>
             </select>
           </div>
 

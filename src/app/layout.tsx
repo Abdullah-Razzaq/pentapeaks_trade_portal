@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import CopyRestriction from "@/components/CopyRestriction";
+import { getSession } from "@/lib/session";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -23,18 +24,21 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await getSession();
+  const isAdmin = session?.role === "admin";
+
   return (
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col select-none">
-        <CopyRestriction />
+      <body className={`min-h-full flex flex-col ${isAdmin ? "" : "select-none"}`}>
+        {!isAdmin && <CopyRestriction />}
         {children}
       </body>
     </html>

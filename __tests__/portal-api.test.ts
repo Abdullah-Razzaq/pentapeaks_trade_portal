@@ -1,7 +1,6 @@
 import request from "supertest";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
-import { randomUUID } from "crypto";
 import { Pool } from "pg";
 
 dotenv.config({ path: ".env.local" });
@@ -95,7 +94,7 @@ describe("Portal API Routes", () => {
   describe("Admin Subscriptions API", () => {
     let testSubId: number | null = null;
 
-    it("POST /api/admin/subscriptions computes +25d alert_date and +30d renew_date", async () => {
+    it("POST /api/admin/subscriptions computes +28d alert_date and +30d renew_date", async () => {
       const res = await request(API_URL)
         .post("/api/admin/subscriptions")
         .send({
@@ -107,8 +106,16 @@ describe("Portal API Routes", () => {
       if (res.status === 201) {
         const sub = res.body.subscription;
         expect(sub).toBeDefined();
-        expect(new Date(sub.alert_date).toISOString().includes("2026-08")).toBe(true);
-        expect(new Date(sub.renew_date).toISOString().includes("2026-08")).toBe(true);
+        // pg returns DATE columns as local Date objects (e.g. 2026-08-29 00:00:00 local time).
+        // Convert to local YYYY-MM-DD string to verify the exact date.
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        const alertD = new Date(sub.alert_date);
+        const alertLocalStr = `${alertD.getFullYear()}-${pad(alertD.getMonth() + 1)}-${pad(alertD.getDate())}`;
+        const renewD = new Date(sub.renew_date);
+        const renewLocalStr = `${renewD.getFullYear()}-${pad(renewD.getMonth() + 1)}-${pad(renewD.getDate())}`;
+        
+        expect(alertLocalStr).toBe("2026-08-29");
+        expect(renewLocalStr).toBe("2026-08-31");
         testSubId = sub.id;
       } else {
         expect(res.status).toBe(401);

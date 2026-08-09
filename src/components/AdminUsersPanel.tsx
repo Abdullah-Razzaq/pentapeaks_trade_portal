@@ -15,6 +15,7 @@ type User = {
   subscription_start_date: string | null;
   subscription_expires_at: string | null;
   batch: string | null;
+  business_role: string | null;
   is_suspended: boolean;
 };
 
@@ -279,6 +280,7 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
               <tr>
                 <th className="px-4 py-3 whitespace-nowrap">User</th>
                 <th className="px-4 py-3 whitespace-nowrap">Role</th>
+                <th className="px-4 py-3 whitespace-nowrap">Business Role</th>
                 <th className="px-4 py-3 whitespace-nowrap">Batch</th>
                 <th className="px-4 py-3 whitespace-nowrap">Plan</th>
                 <th className="px-4 py-3 whitespace-nowrap">Status</th>
@@ -323,6 +325,7 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
                       </div>
                     </td>
                     <td className="px-4 py-3 capitalize text-gray-600">{user.role}</td>
+                    <td className="px-4 py-3 text-gray-600 font-medium">{user.business_role || "—"}</td>
                     <td className="px-4 py-3 text-gray-600">{user.batch || "Not a Student"}</td>
                     <td className="px-4 py-3">
                       <span

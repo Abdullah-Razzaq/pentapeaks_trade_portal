@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -74,11 +75,16 @@ function StatCard({ label, value }: { label: string; value: string }) {
 
 export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRole?: string }) {
   const { subscriptionExpiresAt, refreshQuota, planType } = useUserQuota();
-  const [query, setQuery] = useState("");
-  const [product, setProduct] = useState("");
-  const [destinationCountry, setDestinationCountry] = useState("");
-  const [sort, setSort] = useState<SortOrder>("date_asc");
-  const [page, setPage] = useState(1);
+  
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const [query, setQuery] = useState(searchParams.get("query") || "");
+  const [product, setProduct] = useState(searchParams.get("product") || "");
+  const [destinationCountry, setDestinationCountry] = useState(searchParams.get("destinationCountry") || "");
+  const [sort, setSort] = useState<SortOrder>((searchParams.get("sort") as SortOrder) || "date_asc");
+  const [page, setPage] = useState(parseInt(searchParams.get("page") || "1"));
   const limit = 50;
   const isSortingDisabled = planType === "trial" && userRole !== "admin";
   const isCompanyFilterDisabled = planType === "trial" && userRole !== "admin";
@@ -98,7 +104,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
   const [primaryOptions, setPrimaryOptions] = useState<string[]>([]);
   const [secondaryOptions, setSecondaryOptions] = useState<string[]>([]);
   const [tertiaryOptions, setTertiaryOptions] = useState<string[]>([]);
-  const [hsCodeFilter, setHsCodeFilter] = useState("");
+  const [hsCodeFilter, setHsCodeFilter] = useState(searchParams.get("hsCodeFilter") || "");
   const [selectedRow, setSelectedRow] = useState<Row | null>(null);
   const [showUpgradeBanner, setShowUpgradeBanner] = useState(false);
 
@@ -152,6 +158,41 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
     const handle = setTimeout(() => load(query, product, destinationCountry, hsCodeFilter, sort, page), 500);
     return () => clearTimeout(handle);
   }, [query, product, destinationCountry, hsCodeFilter, sort, page, load]);
+
+  // Persist to URL
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    let changed = false;
+
+    const updateParam = (key: string, value: string | number) => {
+      const strVal = String(value);
+      if (strVal && strVal !== "1" && strVal !== "date_asc") {
+        if (params.get(key) !== strVal) {
+          params.set(key, strVal);
+          changed = true;
+        }
+      } else {
+        if (params.has(key) && (strVal === "" || strVal === "1" || strVal === "date_asc")) {
+          params.delete(key);
+          changed = true;
+        } else if (params.get(key) !== strVal && strVal) {
+          params.set(key, strVal);
+          changed = true;
+        }
+      }
+    };
+
+    updateParam("query", query);
+    updateParam("product", product);
+    updateParam("destinationCountry", destinationCountry);
+    updateParam("sort", sort);
+    updateParam("page", page);
+    updateParam("hsCodeFilter", hsCodeFilter);
+
+    if (changed) {
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    }
+  }, [query, product, destinationCountry, sort, page, hsCodeFilter, pathname, router, searchParams]);
 
   // Avoid resetting page in useEffect to prevent cascading renders
   // We'll reset it directly in the input onChange handlers

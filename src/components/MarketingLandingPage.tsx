@@ -25,6 +25,7 @@ export default function MarketingLandingPage() {
           <nav className="hidden items-center gap-6 md:flex">
             <a href="#products" className="text-sm font-medium text-gray-600 hover:text-orange-600 transition-colors">Products</a>
             <a href="#pricing" className="text-sm font-medium text-gray-600 hover:text-orange-600 transition-colors">Subscriptions</a>
+            <Link href="/signup" className="text-sm font-medium text-gray-600 hover:text-orange-600 transition-colors">Inquiries</Link>
           </nav>
           <div className="flex items-center gap-4">
             <Link

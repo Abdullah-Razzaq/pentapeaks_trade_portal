@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
 
     // Query pending verifications using the 6-digit prefix
     const { rows } = await pool.query(
-      "SELECT token, email, name, password_hash, batch, expires_at FROM pending_verifications WHERE token LIKE $1 AND email = $2",
+      "SELECT token, email, name, password_hash, batch, business_role, expires_at FROM pending_verifications WHERE token LIKE $1 AND email = $2",
       [`${code}_%`, normalizedEmail]
     );
 
@@ -41,9 +41,9 @@ export async function POST(request: NextRequest) {
       const existingUser = await client.query("SELECT id FROM users WHERE email = $1", [normalizedEmail]);
       if (existingUser.rows.length === 0) {
         await client.query(
-          `INSERT INTO users (name, email, password_hash, role, is_active, subscription_expires_at, plan_type, batch)
-           VALUES ($1, $2, $3, 'user', true, $4, 'trial', $5)`,
-          [pending.name, normalizedEmail, pending.password_hash, expireDate, pending.batch]
+          `INSERT INTO users (name, email, password_hash, role, is_active, subscription_expires_at, plan_type, batch, business_role)
+           VALUES ($1, $2, $3, 'user', true, $4, 'trial', $5, $6)`,
+          [pending.name, normalizedEmail, pending.password_hash, expireDate, pending.batch, pending.business_role]
         );
       }
       

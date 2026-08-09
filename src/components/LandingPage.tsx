@@ -29,6 +29,7 @@ export default async function LandingPage() {
             <Link href="#products" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Products</Link>
             <Link href="#tariffs" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Tariffs</Link>
             <Link href="#pricing" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Pricing</Link>
+            <Link href="/signup" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Inquiries</Link>
           </nav>
           <div className="flex items-center gap-4">
             {session ? (

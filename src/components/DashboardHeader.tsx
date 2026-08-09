@@ -17,6 +17,7 @@ const baseNavItems: NavItem[] = [
   { href: "/dashboard/find-supplier", label: "Find Supplier" },
   { href: "/dashboard/hs-code-search", label: "HS Code Search" },
   { href: "/dashboard/check-tariff", label: "Check Tariff/VAT" },
+  { href: "/dashboard/inquiries", label: "Inquiries" },
 ];
 
 export default function DashboardHeader({

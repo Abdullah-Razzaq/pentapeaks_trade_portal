@@ -12,6 +12,7 @@ const signupSchema = z.object({
   }),
   password: z.string().min(6, "Password must be at least 6 characters."),
   batch: z.string().min(1, "Batch selection is required."),
+  business_role: z.enum(["Manufacturer", "Seller", "Buyer"]),
 });
 
 export async function POST(request: NextRequest) {
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { name, email, password, batch } = parsed.data;
+    const { name, email, password, batch, business_role } = parsed.data;
     
     // Dynamic Batch Validation
     let maxBatch = 15;
@@ -67,10 +68,10 @@ export async function POST(request: NextRequest) {
 
     // 3. Upsert into pending_verifications (allow resending if requested again)
     await pool.query(
-      `INSERT INTO pending_verifications (token, email, name, password_hash, batch, expires_at)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO pending_verifications (token, email, name, password_hash, batch, business_role, expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        ON CONFLICT (token) DO NOTHING`,
-      [verificationToken, normalizedEmail, name, passwordHash, batch, verificationExpiresAt]
+      [verificationToken, normalizedEmail, name, passwordHash, batch, business_role, verificationExpiresAt]
     );
 
     // Dynamic Base URL handling

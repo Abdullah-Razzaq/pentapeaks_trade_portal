@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { pool } from "@/lib/db";
 import { getSession } from "@/lib/session";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const session = await getSession();
     if (!session || session.role !== "admin") {
@@ -39,9 +39,9 @@ export async function POST(request: NextRequest) {
     const renewDateObj = new Date(startDateObj);
     renewDateObj.setDate(renewDateObj.getDate() + 30);
     
-    // alert_date = start_date + 25 days
+    // alert_date = start_date + 28 days
     const alertDateObj = new Date(startDateObj);
-    alertDateObj.setDate(alertDateObj.getDate() + 25);
+    alertDateObj.setDate(alertDateObj.getDate() + 28);
 
     const { rows } = await pool.query(
       `INSERT INTO admin_subscriptions (subscription_name, start_date, renew_date, alert_date)
@@ -131,7 +131,7 @@ export async function PATCH(request: NextRequest) {
     const renewDateObj = new Date(startDateObj);
     renewDateObj.setDate(renewDateObj.getDate() + 30);
     const alertDateObj = new Date(startDateObj);
-    alertDateObj.setDate(alertDateObj.getDate() + 25);
+    alertDateObj.setDate(alertDateObj.getDate() + 28);
 
     const { rows } = await pool.query(
       `UPDATE admin_subscriptions 

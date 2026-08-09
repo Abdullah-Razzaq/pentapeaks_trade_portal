@@ -6,15 +6,6 @@ export default function CopyRestriction() {
   useEffect(() => {
     let cleanup: (() => void) | undefined;
 
-    fetch("/api/auth/me")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data?.role === "admin") {
-          document.body.classList.remove("select-none");
-          document.body.classList.add("select-text", "!select-auto");
-          return;
-        }
-
         const handleCopy = (e: ClipboardEvent) => {
           const target = e.target as HTMLElement;
           if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") {
@@ -39,8 +30,6 @@ export default function CopyRestriction() {
           document.removeEventListener("copy", handleCopy);
           document.removeEventListener("contextmenu", handleContextMenu);
         };
-      })
-      .catch(() => {});
 
     return () => {
       if (cleanup) cleanup();

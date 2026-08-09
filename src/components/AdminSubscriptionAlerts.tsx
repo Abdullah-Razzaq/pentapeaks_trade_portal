@@ -17,6 +17,8 @@ export default function AdminSubscriptionAlerts() {
   const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
+    if (sessionStorage.getItem("admin_sub_alert_dismissed") === "true") return;
+    
     fetch("/api/admin/subscriptions/alerts")
       .then((res) => res.json())
       .then((data) => {
@@ -27,6 +29,11 @@ export default function AdminSubscriptionAlerts() {
       })
       .catch(console.error);
   }, []);
+
+  const handleDismiss = () => {
+    sessionStorage.setItem("admin_sub_alert_dismissed", "true");
+    setShowModal(false);
+  };
 
   if (!showModal) return null;
 
@@ -44,7 +51,7 @@ export default function AdminSubscriptionAlerts() {
         
         <div className="p-6">
           <p className="text-gray-700 mb-4 font-medium">
-            Attention: The following subscriptions are renewing within 5 days! Check your plans.
+            Attention: The following subscriptions are renewing within 2 days! Check your plans.
           </p>
           
           <div className="space-y-3 max-h-60 overflow-y-auto">
@@ -61,7 +68,7 @@ export default function AdminSubscriptionAlerts() {
         
         <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
           <button 
-            onClick={() => setShowModal(false)}
+            onClick={handleDismiss}
             className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-white"
           >
             Dismiss
