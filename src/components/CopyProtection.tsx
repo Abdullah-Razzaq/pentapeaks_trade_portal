@@ -36,12 +36,21 @@ export default function CopyProtection({ isAdmin }: { isAdmin?: boolean }) {
 
     // Prevent context menu (right-click)
     const handleContextMenu = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") {
+        return;
+      }
       e.preventDefault();
     };
 
     // Prevent copy and cut
     const handleCopyCut = (e: ClipboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") {
+        return;
+      }
       e.preventDefault();
+      alert("Cannot copy data: Direct copying of trade records is restricted on PentaPeaks International.");
     };
 
     // Prevent specific keyboard shortcuts
