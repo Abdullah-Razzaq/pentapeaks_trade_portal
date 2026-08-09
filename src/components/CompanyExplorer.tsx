@@ -159,10 +159,21 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
     return () => clearTimeout(handle);
   }, [query, product, destinationCountry, hsCodeFilter, sort, page, load]);
 
-  // Persist to URL
-  useEffect(() => {
+  // Persist to URL on explicit changes
+  const updateUrlParams = useCallback((updates: Partial<{
+    query: string;
+    product: string;
+    destinationCountry: string;
+    sort: string;
+    page: number;
+    hsCodeFilter: string;
+  }>) => {
     const params = new URLSearchParams(searchParams.toString());
     let changed = false;
+
+    const currentValues = {
+      query, product, destinationCountry, sort, page, hsCodeFilter, ...updates
+    };
 
     const updateParam = (key: string, value: string | number) => {
       const strVal = String(value);
@@ -182,17 +193,17 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
       }
     };
 
-    updateParam("query", query);
-    updateParam("product", product);
-    updateParam("destinationCountry", destinationCountry);
-    updateParam("sort", sort);
-    updateParam("page", page);
-    updateParam("hsCodeFilter", hsCodeFilter);
+    updateParam("query", currentValues.query);
+    updateParam("product", currentValues.product);
+    updateParam("destinationCountry", currentValues.destinationCountry);
+    updateParam("sort", currentValues.sort);
+    updateParam("page", currentValues.page);
+    updateParam("hsCodeFilter", currentValues.hsCodeFilter);
 
     if (changed) {
       router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     }
-  }, [query, product, destinationCountry, sort, page, hsCodeFilter, pathname, router, searchParams]);
+  }, [pathname, router, searchParams, query, product, destinationCountry, sort, page, hsCodeFilter]);
 
   // Avoid resetting page in useEffect to prevent cascading renders
   // We'll reset it directly in the input onChange handlers
@@ -242,6 +253,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
     // Set filter for the grid below
     setHsCodeFilter(hsPrefix);
     setPage(1); // reset pagination
+    updateUrlParams({ hsCodeFilter: hsPrefix, page: 1 });
     
     setStatusLoading(true);
     setStatusError(null);
@@ -288,6 +300,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
   
     // 3. Re-fetch main table back to initial page load state
     setPage(1);
+    updateUrlParams({ query: '', product: '', destinationCountry: '', hsCodeFilter: '', page: 1, sort: 'date_asc' });
   };
 
   const toggleExpand = (id: string | number) => {
@@ -619,6 +632,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
             onChange={(event) => {
               setQuery(event.target.value);
               setPage(1);
+              updateUrlParams({ query: event.target.value, page: 1 });
             }}
             placeholder={isCompanyFilterDisabled ? "Filter locked (Upgrade to Pro)" : "Filter by company name..."}
             className={`w-full rounded-xl border border-gray-200 bg-white/90 backdrop-blur-md px-4 py-2.5 text-sm text-gray-900 shadow-sm outline-none transition hover:border-amber-500 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 ${
@@ -645,6 +659,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
             onChange={(event) => {
               setProduct(event.target.value);
               setPage(1);
+              updateUrlParams({ product: event.target.value, page: 1 });
             }}
             placeholder={isProductSearchLocked ? "Product search locked" : "Filter by product / description..."}
             className={`w-full rounded-xl border border-gray-200 bg-white/90 backdrop-blur-md px-4 py-2.5 text-sm text-gray-900 shadow-sm outline-none transition hover:border-amber-500 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 ${
@@ -671,6 +686,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
             onChange={(val) => {
               setDestinationCountry(val);
               setPage(1);
+              updateUrlParams({ destinationCountry: val, page: 1 });
             }}
             options={availableCountries}
             placeholder={isDestinationFilterDisabled ? "Filter locked (Upgrade to Pro)" : "Filter by destination country..."}
@@ -694,6 +710,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
           onChange={(event) => {
             setSort(event.target.value as SortOrder);
             setPage(1);
+            updateUrlParams({ sort: event.target.value as SortOrder, page: 1 });
           }}
           disabled={isSortingDisabled}
           title={isSortingDisabled ? "Sorting is available for Pro and Premium users." : "Sort by"}
@@ -1069,7 +1086,13 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
           </p>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              onClick={() => {
+                setPage((p) => {
+                  const newPage = Math.max(1, p - 1);
+                  updateUrlParams({ page: newPage });
+                  return newPage;
+                });
+              }}
               disabled={page === 1 || loading}
               className="rounded-lg border border-gray-200 px-3 py-1.5 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -1084,7 +1107,11 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
                   setShowUpgradeBanner(true);
                   return;
                 }
-                setPage((p) => Math.min(totalPages, p + 1));
+                setPage((p) => {
+                  const newPage = Math.min(totalPages, p + 1);
+                  updateUrlParams({ page: newPage });
+                  return newPage;
+                });
               }}
               disabled={page >= totalPages || loading}
               className="rounded-lg border border-gray-200 px-3 py-1.5 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
