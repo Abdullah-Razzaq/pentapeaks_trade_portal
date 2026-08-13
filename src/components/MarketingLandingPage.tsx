@@ -153,7 +153,7 @@ export default function MarketingLandingPage() {
                         <span className="text-base text-blue-200 font-medium ml-1">/month</span>
                       </div>
                       <p className="text-blue-100/80 mb-8 text-base leading-relaxed">
-                        Unlock full records, company filters, and 10 downloads/day.
+                        Unlock full records for 2 products of your choice and advanced company filters.
                       </p>
                       <ul className="space-y-4 mb-10 text-sm font-medium">
                         <li className="flex items-start">

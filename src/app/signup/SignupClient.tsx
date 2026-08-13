@@ -17,6 +17,8 @@ export default function SignupClient() {
   const [showPassword, setShowPassword] = useState(false);
   const [maxBatch, setMaxBatch] = useState(15);
   const [verificationCode, setVerificationCode] = useState("");
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
   
   // Step 2 state
   const [step, setStep] = useState<1 | 2>(1);
@@ -234,10 +236,39 @@ export default function SignupClient() {
             <p className="mt-1 text-xs text-neutral-500">Minimum 6 characters</p>
           </div>
 
+          <div className="flex flex-col gap-2">
+            <div className="flex items-start gap-2">
+              <input
+                id="terms"
+                type="checkbox"
+                checked={agreedToTerms}
+                onChange={(e) => setAgreedToTerms(e.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-amber-500 focus:ring-amber-500"
+              />
+              <label htmlFor="terms" className="text-sm text-gray-700">
+                I agree to the{" "}
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); setShowTerms(!showTerms); }}
+                  className="font-semibold text-amber-500 hover:text-amber-600 underline"
+                >
+                  Terms and Conditions
+                </button>{" "}
+                of PentaPeaks International.
+              </label>
+            </div>
+            {showTerms && (
+              <div className="rounded-lg bg-gray-50 border border-gray-200 p-3 text-xs text-gray-600 space-y-2">
+                <p><strong>1. Data Usage Policy:</strong> You cannot share or redistribute platform data with anyone. All records are strictly for personal business use.</p>
+                <p><strong>2. Device & Session Limits:</strong> You cannot log into multiple devices simultaneously with the same account. Concurrent logins will lead to automatic account deactivation.</p>
+              </div>
+            )}
+          </div>
+
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={loading}
+            disabled={loading || !agreedToTerms}
             className="flex w-full items-center justify-center rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-semibold text-black shadow-md transition-all hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
           >
             {loading ? (
