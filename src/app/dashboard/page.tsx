@@ -23,7 +23,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-7xl pb-16">
-      {planType === "pro" && proProducts.length < 5 && (
+      {planType === "pro" && proProducts.length < 2 && (
         <ProProductSelectionModal />
       )}
       
