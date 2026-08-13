@@ -140,7 +140,7 @@ describe("Portal API Routes", () => {
   });
 
   describe("GET /api/trade/product-status", () => {
-    it("enforces 5-product limit check for Pro users", async () => {
+    it("enforces 2-product limit check for Pro users", async () => {
       const res = await request(API_URL)
         .get("/api/trade/product-status?hs_code=1006")
         .set("Cookie", [userCookie]);

@@ -17,7 +17,6 @@ export async function getSession(): Promise<SessionPayload | null> {
 
     if (rows.length === 0 || rows[0].current_session_token !== payload.sessionToken) {
       // Mismatch: log out the user by clearing cookie
-      cookieStore.delete(SESSION_COOKIE_NAME);
       return null;
     }
     

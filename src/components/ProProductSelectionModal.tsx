@@ -44,7 +44,7 @@ export default function ProProductSelectionModal() {
   }, [query, isFocused]);
 
   const addProduct = (product: string) => {
-    if (selectedProducts.length < 5 && !selectedProducts.includes(product)) {
+    if (selectedProducts.length < 2 && !selectedProducts.includes(product)) {
       setSelectedProducts([...selectedProducts, product]);
     }
     setQuery("");
@@ -56,8 +56,8 @@ export default function ProProductSelectionModal() {
   };
 
   const saveProducts = async () => {
-    if (selectedProducts.length !== 5) {
-      setError("Please select exactly 5 products.");
+    if (selectedProducts.length !== 2) {
+      setError("Please select exactly 2 products.");
       return;
     }
     setSaving(true);
@@ -88,8 +88,8 @@ export default function ProProductSelectionModal() {
         <div className="px-6 py-5 border-b border-gray-100 flex flex-col gap-2">
           <h3 className="text-xl font-bold text-gray-900">Welcome to Pentapeaks Pro</h3>
           <p className="text-sm text-gray-600 leading-relaxed">
-            As a Pro member, you have access to full verified data for <strong className="text-purple-600">5 products</strong>. 
-            Please search and select the 5 product categories you want to focus on. 
+            As a Pro member, you have access to full verified data for <strong className="text-purple-600">2 products</strong>. 
+            Please search and select the 2 product categories you want to focus on. 
             <br/><span className="text-rose-500 font-medium">Note: Once saved, this cannot be changed without contacting support.</span>
           </p>
         </div>
@@ -108,7 +108,7 @@ export default function ProProductSelectionModal() {
                 }
               }}
               placeholder="Search by name or HS code..."
-              disabled={selectedProducts.length >= 5}
+              disabled={selectedProducts.length >= 2}
               className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm outline-none transition focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 disabled:bg-gray-50 disabled:text-gray-400"
             />
             {loading && (
@@ -143,7 +143,7 @@ export default function ProProductSelectionModal() {
             <div className="flex items-center justify-between mb-2">
               <label className="block text-sm font-semibold text-gray-900">Selected Products</label>
               <span className="text-xs font-bold px-2 py-1 bg-purple-100 text-purple-700 rounded-lg">
-                {selectedProducts.length} / 5
+                {selectedProducts.length} / 2
               </span>
             </div>
             
@@ -180,7 +180,7 @@ export default function ProProductSelectionModal() {
         <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 rounded-b-2xl flex justify-end">
           <button
             onClick={saveProducts}
-            disabled={selectedProducts.length !== 5 || saving}
+            disabled={selectedProducts.length !== 2 || saving}
             className="rounded-xl bg-purple-600 px-6 py-2.5 text-sm font-bold text-white shadow-lg transition hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {saving ? "Saving..." : "Confirm & Unlock Dashboard"}

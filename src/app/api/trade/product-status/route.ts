@@ -33,12 +33,12 @@ export async function GET(request: NextRequest) {
     const { rows } = await pool.query(
       `SELECT 1 FROM export_shipments
        WHERE UPPER(REGEXP_REPLACE(description, '^[^A-Za-z]*([A-Za-z]+).*$', '\\1')) = ANY($1::text[])
-         AND REPLACE(to_char(pct, 'FM0000.0000'), '.', '') LIKE REPLACE($2, '.', '') || '%'
+         AND (description ILIKE '%' || $2 || '%' OR REPLACE(to_char(pct, 'FM0000.0000'), '.', '') ILIKE '%' || $2 || '%')
        LIMIT 1`,
       [keywords, hsCode]
     );
     if (rows.length === 0) {
-      return NextResponse.json({ error: "Access Restricted: You can only check status for your 5 monitored products for this month." }, { status: 403 });
+      return NextResponse.json({ error: "Access Restricted: You can only check status for your 2 monitored products for this month." }, { status: 403 });
     }
   }
 
@@ -53,13 +53,13 @@ export async function GET(request: NextRequest) {
          MIN(date) AS first_shipment,
          MAX(date) AS last_shipment
        FROM export_shipments
-       WHERE pct IS NOT NULL AND REPLACE(to_char(pct, 'FM0000.0000'), '.', '') LIKE REPLACE($1, '.', '') || '%'`,
+       WHERE (description ILIKE '%' || $1 || '%' OR REPLACE(to_char(pct, 'FM0000.0000'), '.', '') ILIKE '%' || $1 || '%')`,
       [hsCode]
     ),
     pool.query(
       `SELECT importer AS company, COUNT(*)::int AS shipments, COALESCE(SUM(value_pkr), 0)::float8 AS total_value_pkr
        FROM export_shipments
-       WHERE importer IS NOT NULL AND pct IS NOT NULL AND REPLACE(to_char(pct, 'FM0000.0000'), '.', '') LIKE REPLACE($1, '.', '') || '%'
+       WHERE importer IS NOT NULL AND (description ILIKE '%' || $1 || '%' OR REPLACE(to_char(pct, 'FM0000.0000'), '.', '') ILIKE '%' || $1 || '%')
        GROUP BY importer
        ORDER BY total_value_pkr DESC
        LIMIT 5`,
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
     pool.query(
       `SELECT exporter AS company, COUNT(*)::int AS shipments, COALESCE(SUM(value_pkr), 0)::float8 AS total_value_pkr
        FROM export_shipments
-       WHERE exporter IS NOT NULL AND pct IS NOT NULL AND REPLACE(to_char(pct, 'FM0000.0000'), '.', '') LIKE REPLACE($1, '.', '') || '%'
+       WHERE exporter IS NOT NULL AND (description ILIKE '%' || $1 || '%' OR REPLACE(to_char(pct, 'FM0000.0000'), '.', '') ILIKE '%' || $1 || '%')
        GROUP BY exporter
        ORDER BY total_value_pkr DESC
        LIMIT 5`,
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
     pool.query(
       `SELECT origin AS country, COUNT(*)::int AS shipments, COALESCE(SUM(value_pkr), 0)::float8 AS total_value_pkr
        FROM export_shipments
-       WHERE origin IS NOT NULL AND pct IS NOT NULL AND REPLACE(to_char(pct, 'FM0000.0000'), '.', '') LIKE REPLACE($1, '.', '') || '%'
+       WHERE origin IS NOT NULL AND (description ILIKE '%' || $1 || '%' OR REPLACE(to_char(pct, 'FM0000.0000'), '.', '') ILIKE '%' || $1 || '%')
        GROUP BY origin
        ORDER BY total_value_pkr DESC
        LIMIT 5`,

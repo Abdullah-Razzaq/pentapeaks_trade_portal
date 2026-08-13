@@ -149,7 +149,7 @@ export default function MarketingLandingPage() {
                         <h3 className="text-2xl font-bold">Pentapeaks Pro</h3>
                       </div>
                       <div className="mb-6">
-                        <span className="text-3xl sm:text-5xl font-extrabold tracking-tight">4,500 PKR</span>
+                        <span className="text-3xl sm:text-5xl font-extrabold tracking-tight">7,500 PKR</span>
                         <span className="text-base text-blue-200 font-medium ml-1">/month</span>
                       </div>
                       <p className="text-blue-100/80 mb-8 text-base leading-relaxed">

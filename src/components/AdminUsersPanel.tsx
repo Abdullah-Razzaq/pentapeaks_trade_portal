@@ -51,6 +51,11 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
   const [deleteConfirmUser, setDeleteConfirmUser] = useState<User | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
+  /* ── Assign Product feature state ── */
+  const [assignProductUser, setAssignProductUser] = useState<User | null>(null);
+  const [newProductName, setNewProductName] = useState("");
+  const [assigningProduct, setAssigningProduct] = useState(false);
+
   async function loadUsers(isInitialLoad = false) {
     if (!isInitialLoad) {
       setLoading(true);
@@ -199,6 +204,30 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
       setTogglingId(null);
     }
   }
+
+  const handleAssignProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!assignProductUser || !newProductName) return;
+    setAssigningProduct(true);
+    try {
+      const res = await fetch("/api/admin/users/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: assignProductUser.id, productName: newProductName }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to assign product");
+      }
+      setAssignProductUser(null);
+      setNewProductName("");
+      await loadUsers();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Error assigning product");
+    } finally {
+      setAssigningProduct(false);
+    }
+  };
 
   const filteredUsers = users.filter((u) => {
     // Search match
@@ -441,6 +470,14 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
                             Renew
                           </button>
                           <button
+                            onClick={() => setAssignProductUser(user)}
+                            disabled={user.id === currentUserId}
+                            title="Assign a product"
+                            className="rounded-lg px-2.5 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 border border-gray-300 text-gray-600 hover:border-purple-500/50 hover:bg-purple-500/10 hover:text-purple-400 whitespace-nowrap flex items-center justify-center h-8"
+                          >
+                            + Add Product
+                          </button>
+                          <button
                             onClick={() => setDeleteConfirmUser(user)}
                             disabled={user.id === currentUserId || deletingId === user.id}
                             title={user.id === currentUserId ? "You cannot delete your own account." : "Delete user permanently"}
@@ -511,6 +548,54 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
         </div>
       )}
 
+      {/* ── Assign Product Modal ── */}
+      {assignProductUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-50/80 backdrop-blur-sm px-4 transition-all">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-gray-200">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                Assign Product
+              </h2>
+              <button
+                onClick={() => setAssignProductUser(null)}
+                className="text-gray-500 transition hover:text-gray-700 rounded-full hover:bg-gray-100 p-1"
+                aria-label="Close"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+            <form onSubmit={handleAssignProduct}>
+              <p className="text-sm text-gray-600 mb-4">
+                Assign a product to <span className="font-bold text-gray-900">{assignProductUser.name}</span>.
+              </p>
+              <input
+                type="text"
+                placeholder="Product Name (e.g. Rice, Cement)"
+                required
+                value={newProductName}
+                onChange={(e) => setNewProductName(e.target.value)}
+                className="w-full rounded-xl border border-gray-300 bg-gray-50 px-4 py-2 text-sm text-gray-900 outline-none transition focus:border-purple-500 mb-4"
+              />
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setAssignProductUser(null)}
+                  className="flex-1 rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-bold text-gray-700 transition hover:bg-gray-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={assigningProduct}
+                  className="flex-1 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-purple-700 shadow-sm disabled:cursor-not-allowed disabled:opacity-60 flex items-center justify-center"
+                >
+                  {assigningProduct ? "Assigning..." : "Assign"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );

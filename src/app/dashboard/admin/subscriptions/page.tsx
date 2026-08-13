@@ -93,6 +93,24 @@ export default function SubscriptionsPage() {
     }
   };
 
+  const handleRenew = async (id: number) => {
+    if (!confirm("Are you sure you want to renew this subscription for 30 days?")) return;
+    try {
+      const res = await fetch(`/api/admin/subscriptions/renew`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subscriptionId: id }),
+      });
+      if (res.ok) {
+        fetchSubscriptions();
+      } else {
+        alert("Failed to renew subscription");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const getRowHighlight = (renewDate: string, isActive: boolean) => {
     if (!isActive) return "hover:bg-gray-50 transition-colors";
     const now = new Date();
@@ -172,6 +190,12 @@ export default function SubscriptionsPage() {
                       className="text-blue-600 hover:text-blue-900 transition-colors"
                     >
                       {sub.is_active ? "Deactivate" : "Activate"}
+                    </button>
+                    <button
+                      onClick={() => handleRenew(sub.id)}
+                      className="text-green-600 hover:text-green-900 transition-colors font-bold"
+                    >
+                      Renew
                     </button>
                     <button
                       onClick={() => handleDelete(sub.id)}

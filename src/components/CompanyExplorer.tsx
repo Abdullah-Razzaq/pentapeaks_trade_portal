@@ -98,12 +98,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [primary, setPrimary] = useState("");
-  const [secondary, setSecondary] = useState("");
-  const [tertiary, setTertiary] = useState("");
-  const [primaryOptions, setPrimaryOptions] = useState<string[]>([]);
-  const [secondaryOptions, setSecondaryOptions] = useState<string[]>([]);
-  const [tertiaryOptions, setTertiaryOptions] = useState<string[]>([]);
+  const [statusSearch, setStatusSearch] = useState("");
   const [hsCodeFilter, setHsCodeFilter] = useState(searchParams.get("hsCodeFilter") || "");
   const [selectedRow, setSelectedRow] = useState<Row | null>(null);
   const [showUpgradeBanner, setShowUpgradeBanner] = useState(false);
@@ -209,31 +204,6 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
   // We'll reset it directly in the input onChange handlers
 
 
-  // Cascading options
-  useEffect(() => {
-    fetch(`/api/products/categories?level=2`)
-      .then(res => res.json())
-      .then(data => setPrimaryOptions(data.categories || []))
-      .catch(console.error);
-  }, []);
-
-  useEffect(() => {
-    if (primary) {
-      fetch(`/api/products/categories?level=4&parent=${encodeURIComponent(primary)}`)
-        .then(res => res.json())
-        .then(data => setSecondaryOptions(data.categories || []))
-        .catch(console.error);
-    }
-  }, [primary]);
-
-  useEffect(() => {
-    if (secondary) {
-      fetch(`/api/products/categories?level=6&parent=${encodeURIComponent(secondary)}`)
-        .then(res => res.json())
-        .then(data => setTertiaryOptions(data.categories || []))
-        .catch(console.error);
-    }
-  }, [secondary]);
 
   useEffect(() => {
     fetch("/api/trade/countries")
@@ -243,10 +213,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
   }, [userRole]);
 
   async function checkStatus() {
-    let hsPrefix = "";
-    if (tertiary) hsPrefix = tertiary.split(" ")[0];
-    else if (secondary) hsPrefix = secondary.split(" ")[0];
-    else if (primary) hsPrefix = primary.split(" ")[0];
+    let hsPrefix = statusSearch.split(" ")[0] || statusSearch;
 
     if (!hsPrefix) return;
     
@@ -607,13 +574,15 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
             </div>
           ) : (
             <div className="flex flex-col items-end mt-4 sm:mt-0">
-              <UserExportToolbar 
-                totalPages={totalPages || 1}
-                subscriptionExpiresAt={subscriptionExpiresAt}
-                onDownloadPdf={async (pageNo) => {
-                  await handleExport("pdf", pageNo);
-                }}
-              />
+              {userRole === 'admin' && (
+                <UserExportToolbar 
+                  totalPages={totalPages || 1}
+                  subscriptionExpiresAt={subscriptionExpiresAt}
+                  onDownloadPdf={async (pageNo) => {
+                    await handleExport("pdf", pageNo);
+                  }}
+                />
+              )}
               {downloadError && (
                 <div className="w-full mt-2 text-red-600 bg-red-50 border border-red-200 text-xs px-2 py-1 rounded text-right">
                   {downloadError}
@@ -758,49 +727,20 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
           </button>
         </div>
         <div className={`flex flex-col gap-3 sm:flex-row sm:items-end ${isProductStatusLocked ? 'opacity-60 pointer-events-none grayscale-[50%]' : ''}`}>
-          <div className="flex-1 min-w-[200px]">
-            <label className="mb-1 block text-xs font-medium text-gray-700">Primary Category</label>
-            <Combobox
-              value={primary}
-              onChange={(val) => {
-                setPrimary(val);
-                setSecondary("");
-                setTertiary("");
-                setSecondaryOptions([]);
-                setTertiaryOptions([]);
-              }}
-              options={primaryOptions}
-              placeholder="Search primary category..."
+          <div className="flex-1 w-full">
+            <label className="mb-1 block text-xs font-medium text-gray-700">Product / HS Code</label>
+            <input
+              type="text"
+              value={statusSearch}
+              onChange={(e) => setStatusSearch(e.target.value)}
+              placeholder="Search by product name or HS code..."
               disabled={isProductStatusLocked}
-            />
-          </div>
-          <div className="flex-1 min-w-[200px]">
-            <label className="mb-1 block text-xs font-medium text-gray-700">Secondary Category</label>
-            <Combobox
-              value={secondary}
-              onChange={(val) => {
-                setSecondary(val);
-                setTertiary("");
-                setTertiaryOptions([]);
-              }}
-              options={secondaryOptions}
-              placeholder="Search secondary category..."
-              disabled={isProductStatusLocked}
-            />
-          </div>
-          <div className="flex-1 min-w-[200px]">
-            <label className="mb-1 block text-xs font-medium text-gray-700">Tertiary Category</label>
-            <Combobox
-              value={tertiary}
-              onChange={setTertiary}
-              options={tertiaryOptions}
-              placeholder="Search tertiary category..."
-              disabled={isProductStatusLocked}
+              className="w-full rounded-lg border border-gray-300 bg-gray-50 py-2.5 px-4 text-sm text-gray-900 outline-none transition focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 disabled:opacity-60"
             />
           </div>
           <button
             onClick={checkStatus}
-            disabled={!primary || statusLoading || isProductStatusLocked}
+            disabled={!statusSearch || statusLoading || isProductStatusLocked}
             className="rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60 h-[42px]"
           >
             {statusLoading ? "Checking..." : "Check Status"}

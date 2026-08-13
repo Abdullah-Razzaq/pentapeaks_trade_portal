@@ -234,7 +234,7 @@ export default async function DashboardPage() {
               <div className="relative z-10 flex-1 flex flex-col">
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Pentapeaks Pro</h3>
                 <div className="mb-6">
-                  <span className="text-5xl font-extrabold tracking-tight text-gray-900">4,500 PKR</span>
+                  <span className="text-5xl font-extrabold tracking-tight text-gray-900">7,500 PKR</span>
                   <span className="text-base text-gray-600 font-medium ml-1">/month</span>
                 </div>
                 <p className="text-gray-600 mb-8 text-base leading-relaxed flex-1">

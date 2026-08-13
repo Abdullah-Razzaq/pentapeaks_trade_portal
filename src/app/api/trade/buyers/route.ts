@@ -37,8 +37,8 @@ export async function GET(request: NextRequest) {
   const securityResponse = await enforceSearchSecurity(session, planType);
   if (securityResponse) return securityResponse;
 
-  if (!isAdmin && planType === "pro" && proProducts.length < 5) {
-    return NextResponse.json({ error: "Please select your 5 products on the dashboard first." }, { status: 403 });
+  if (!isAdmin && planType === "pro" && proProducts.length < 2) {
+    return NextResponse.json({ error: "Please select your 2 products on the dashboard first." }, { status: 403 });
   }
 
   let company = request.nextUrl.searchParams.get("company")?.trim() ?? "";
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
        AND ($1 = '' OR importer ILIKE '%' || $1 || '%')
        AND ($2 = '' OR description ILIKE '%' || $2 || '%')
        AND ($3 = '' OR origin = $3)
-       AND ($4 = '' OR REPLACE(to_char(pct, 'FM0000.0000'), '.', '') LIKE REPLACE($4, '.', '') || '%')
+       AND ($4 = '' OR (REPLACE(to_char(pct, 'FM0000.0000'), '.', '') ILIKE '%' || $4 || '%' OR description ILIKE '%' || $4 || '%'))
        AND ($5::text[] IS NULL OR (description ~* ANY($6::text[]) OR UPPER(description) ILIKE ANY($5::text[])))`,
     [company, product, destination_country, hs_code, proKeywordSearch, proRegexSearch]
   );
@@ -163,7 +163,7 @@ export async function GET(request: NextRequest) {
          AND ($1 = '' OR importer ILIKE '%' || $1 || '%')
          AND ($2 = '' OR description ILIKE '%' || $2 || '%')
          AND ($3 = '' OR origin = $3)
-         AND ($4 = '' OR REPLACE(to_char(pct, 'FM0000.0000'), '.', '') LIKE REPLACE($4, '.', '') || '%')
+         AND ($4 = '' OR (REPLACE(to_char(pct, 'FM0000.0000'), '.', '') ILIKE '%' || $4 || '%' OR description ILIKE '%' || $4 || '%'))
          AND ($5::text[] IS NULL OR (description ~* ANY($6::text[]) OR UPPER(description) ILIKE ANY($5::text[])))
        ${orderClause}
        LIMIT $7 OFFSET $8`,

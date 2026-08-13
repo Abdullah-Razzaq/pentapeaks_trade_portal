@@ -11,8 +11,8 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const products = body.products || [];
 
-  if (!Array.isArray(products) || products.length !== 5) {
-    return NextResponse.json({ error: "Please select exactly 5 products." }, { status: 400 });
+  if (!Array.isArray(products) || products.length !== 2) {
+    return NextResponse.json({ error: "Please select exactly 2 products." }, { status: 400 });
   }
 
   try {
