@@ -255,9 +255,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   const handleResetToInitialState = () => {
     // 1. Reset Product Status dropdowns and data
-    setPrimary('');
-    setSecondary('');
-    setTertiary('');
+    setStatusSearch('');
     setStatus(null);
   
     // 2. Clear applied HS code search filter on the page
