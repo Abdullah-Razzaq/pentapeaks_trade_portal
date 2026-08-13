@@ -4,7 +4,8 @@ import { getSession } from "@/lib/session";
 import { enforceSearchSecurity } from "@/lib/rateLimit";
 
 export async function GET(request: NextRequest) {
-  const session = await getSession();
+  try {
+    const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -189,4 +190,8 @@ export async function GET(request: NextRequest) {
   }));
 
   return NextResponse.json({ results, total, page, limit });
+  } catch (error) {
+    console.error("Trade API error:", error);
+    return NextResponse.json({ error: "Failed to fetch trade data" }, { status: 500 });
+  }
 }

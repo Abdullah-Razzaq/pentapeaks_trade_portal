@@ -27,8 +27,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    await pool.query("UPDATE users SET pro_products = $1 WHERE id = $2", [products, session.userId]);
-    return NextResponse.json({ success: true });
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("UPDATE users SET pro_products = $1 WHERE id = $2", [products, session.userId]);
+      await client.query("COMMIT");
+      return NextResponse.json({ success: true });
+    } catch (e) {
+      await client.query("ROLLBACK");
+      throw e;
+    } finally {
+      client.release();
+    }
   } catch (error) {
     console.error("Save products error:", error);
     return NextResponse.json({ error: "Failed to save products" }, { status: 500 });
