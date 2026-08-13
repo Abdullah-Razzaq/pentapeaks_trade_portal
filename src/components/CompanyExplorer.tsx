@@ -129,7 +129,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
           if (res.status === 403 && errorData?.error === "ACCESS_RESTRICTED") {
             setRows([]);
             setTotal(0);
-            alert("Access Restricted: You can only search for your 5 monitored products for this month.");
+            alert("Access Restricted: You can search only your selected products for this month.");
             return;
           }
           
@@ -213,7 +213,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
   }, [userRole]);
 
   async function checkStatus() {
-    let hsPrefix = statusSearch.split(" ")[0] || statusSearch;
+    const hsPrefix = statusSearch.split(" ")[0] || statusSearch;
 
     if (!hsPrefix) return;
     

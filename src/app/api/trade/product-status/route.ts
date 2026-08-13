@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
       [keywords, hsCode]
     );
     if (rows.length === 0) {
-      return NextResponse.json({ error: "Access Restricted: You can only check status for your 2 monitored products for this month." }, { status: 403 });
+      return NextResponse.json({ error: "Access Restricted: You can search only your selected products for this month." }, { status: 403 });
     }
   }
 
