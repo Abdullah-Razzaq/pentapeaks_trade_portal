@@ -18,7 +18,7 @@ export default function SignupClient() {
   const [maxBatch, setMaxBatch] = useState(15);
   const [verificationCode, setVerificationCode] = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const [showTerms, setShowTerms] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
   
   // Step 2 state
   const [step, setStep] = useState<1 | 2>(1);
@@ -99,6 +99,7 @@ export default function SignupClient() {
   ];
 
   return (
+    <>
     <div className="relative w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-2xl dark:border-gray-200 dark:bg-white my-8">
       <Link href="/" className="absolute right-6 top-6 text-gray-600 hover:text-slate-600 dark:hover:text-gray-700 transition-colors">
         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -242,14 +243,20 @@ export default function SignupClient() {
                 id="terms"
                 type="checkbox"
                 checked={agreedToTerms}
-                onChange={(e) => setAgreedToTerms(e.target.checked)}
+                onChange={(e) => {
+                  if (!agreedToTerms) {
+                    setShowTermsModal(true);
+                  } else {
+                    setAgreedToTerms(false);
+                  }
+                }}
                 className="mt-1 h-4 w-4 rounded border-gray-300 text-amber-500 focus:ring-amber-500"
               />
               <label htmlFor="terms" className="text-sm text-gray-700">
                 I agree to the{" "}
                 <button
                   type="button"
-                  onClick={(e) => { e.preventDefault(); setShowTerms(!showTerms); }}
+                  onClick={(e) => { e.preventDefault(); setShowTermsModal(true); }}
                   className="font-semibold text-amber-500 hover:text-amber-600 underline"
                 >
                   Terms and Conditions
@@ -257,12 +264,6 @@ export default function SignupClient() {
                 of PentaPeaks International.
               </label>
             </div>
-            {showTerms && (
-              <div className="rounded-lg bg-gray-50 border border-gray-200 p-3 text-xs text-gray-600 space-y-2">
-                <p><strong>1. Data Usage Policy:</strong> You cannot share or redistribute platform data with anyone. All records are strictly for personal business use.</p>
-                <p><strong>2. Device & Session Limits:</strong> You cannot log into multiple devices simultaneously with the same account. Concurrent logins will lead to automatic account deactivation.</p>
-              </div>
-            )}
           </div>
 
           <button
@@ -332,5 +333,40 @@ export default function SignupClient() {
         </div>
         )}
       </div>
+      {showTermsModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl">
+            <h2 className="mb-4 text-xl font-bold text-gray-900">Terms & Conditions — PentaPeaks International</h2>
+            <div className="mb-6 space-y-4 text-sm text-gray-700">
+              <p>
+                <strong>1. Data Usage Policy:</strong> You cannot share or redistribute platform data with anyone. All records are strictly for personal business use.
+              </p>
+              <p>
+                <strong>2. Device & Session Limits:</strong> You cannot log into multiple devices simultaneously with the same account. Concurrent logins will lead to automatic account deactivation.
+              </p>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowTermsModal(false)}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAgreedToTerms(true);
+                  setShowTermsModal(false);
+                }}
+                className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-black hover:bg-amber-600 transition-colors shadow-md"
+              >
+                I Agree & Accept
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
