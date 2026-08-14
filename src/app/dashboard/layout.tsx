@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
-import DashboardHeader from "@/components/DashboardHeader";
-import Footer from "@/components/Footer";
+import DashboardShell from "@/components/DashboardShell";
 import { pool } from "@/lib/db";
 import CopyProtection from "@/components/CopyProtection";
 
@@ -31,14 +30,14 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50 text-gray-900">
+    <>
       <CopyProtection isAdmin={session.role === "admin"} />
       {planType === "trial" && session.role !== "admin" && (
-        <div className="w-full bg-amber-500/15 border-b border-amber-500/30 text-amber-900 px-4 py-2 text-center text-sm font-semibold shadow-sm backdrop-blur-sm relative z-50">
+        <div className="w-full bg-amber-500/15 border-b border-amber-500/30 text-amber-900 px-4 py-2 text-center text-sm font-semibold shadow-sm backdrop-blur-sm fixed top-0 z-[100]">
           Your 1-day free trial is active. Upgrade to Pro to unlock unlimited access and prevent loss of access.
         </div>
       )}
-      <DashboardHeader 
+      <DashboardShell
         user={{ 
           name: session.name, 
           role: session.role,
@@ -46,9 +45,9 @@ export default async function DashboardLayout({
           expiresAt: expiresAt?.toISOString() || undefined,
           batch
         }} 
-      />
-      <main className="flex-1 px-4 py-8 sm:px-8">{children}</main>
-      <Footer />
-    </div>
+      >
+        {children}
+      </DashboardShell>
+    </>
   );
 }

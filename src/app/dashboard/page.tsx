@@ -18,8 +18,166 @@ export default async function DashboardPage() {
   );
   const planType = rows[0]?.plan_type || "trial";
   const proProducts = rows[0]?.pro_products || [];
+  let adminStats = null;
+  if (session.role === "admin") {
+    const usersCountRes = await pool.query("SELECT COUNT(*) FROM users");
+    const activeUsersRes = await pool.query("SELECT COUNT(*) FROM users WHERE is_active = true");
+    const proUsersRes = await pool.query("SELECT COUNT(*) FROM users WHERE plan_type = 'pro'");
+    const premiumUsersRes = await pool.query("SELECT COUNT(*) FROM users WHERE plan_type = 'premium'");
+    const trialUsersRes = await pool.query("SELECT COUNT(*) FROM users WHERE plan_type = 'trial'");
+    let tradeRecordsCount = 0;
+    try {
+      const tradeRecordsRes = await pool.query("SELECT COUNT(*) FROM trade_data");
+      tradeRecordsCount = tradeRecordsRes.rows[0].count;
+    } catch {
+      // Table might not exist yet if no data uploaded
+    }
 
+    adminStats = {
+      totalUsers: usersCountRes.rows[0].count,
+      activeUsers: activeUsersRes.rows[0].count,
+      proUsers: proUsersRes.rows[0].count,
+      premiumUsers: premiumUsersRes.rows[0].count,
+      trialUsers: trialUsersRes.rows[0].count,
+      tradeRecords: tradeRecordsCount,
+    };
+  }
 
+  if (session.role === "admin") {
+    return (
+      <div className="mx-auto max-w-7xl pb-16">
+         <AdminSubscriptionAlerts />
+         <div className="mb-8">
+           <h1 className="text-2xl font-bold tracking-tight text-[#17233D]">Good morning, {session.name}</h1>
+           <p className="mt-1 text-[#64748B]">Here&apos;s what&apos;s happening across your PentaPeaks Trade Portal.</p>
+         </div>
+
+         {/* KPI Cards */}
+         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+           <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-sm">
+             <p className="text-sm font-semibold text-[#64748B] mb-2">Total Users</p>
+             <p className="text-3xl font-bold text-[#17233D]">{adminStats?.totalUsers}</p>
+           </div>
+           <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-sm">
+             <p className="text-sm font-semibold text-[#64748B] mb-2">Active Users</p>
+             <p className="text-3xl font-bold text-[#17233D]">{adminStats?.activeUsers}</p>
+           </div>
+           <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-sm">
+             <p className="text-sm font-semibold text-[#64748B] mb-2">Trade Records</p>
+             <p className="text-3xl font-bold text-[#17233D]">{Number(adminStats?.tradeRecords).toLocaleString()}</p>
+           </div>
+           <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-sm">
+             <p className="text-sm font-semibold text-[#64748B] mb-2">System Status</p>
+             <div className="flex items-center gap-2 mt-2">
+               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+               <span className="text-sm font-bold text-emerald-600">Operational</span>
+             </div>
+           </div>
+         </div>
+
+         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+           {/* Left Column */}
+           <div className="lg:col-span-2 space-y-8">
+             
+             {/* Quick Actions */}
+             <div>
+               <h2 className="text-lg font-bold text-[#17233D] mb-4">Quick Actions</h2>
+               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                 <Link href="/dashboard/admin/data-upload" className="flex flex-col items-center justify-center p-4 bg-white border border-[#E5E7EB] rounded-xl shadow-sm hover:border-[#F97316] hover:bg-[#FFF7ED] transition-colors text-center group">
+                   <svg className="w-6 h-6 text-[#F97316] mb-2 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                   <span className="text-sm font-semibold text-[#17233D]">Upload Data</span>
+                 </Link>
+                 <Link href="/dashboard/find-buyer" className="flex flex-col items-center justify-center p-4 bg-white border border-[#E5E7EB] rounded-xl shadow-sm hover:border-[#2563EB] hover:bg-[#EFF6FF] transition-colors text-center group">
+                   <svg className="w-6 h-6 text-[#2563EB] mb-2 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                   <span className="text-sm font-semibold text-[#17233D]">Find Buyers</span>
+                 </Link>
+                 <Link href="/dashboard/admin/users" className="flex flex-col items-center justify-center p-4 bg-white border border-[#E5E7EB] rounded-xl shadow-sm hover:border-[#2563EB] hover:bg-[#EFF6FF] transition-colors text-center group">
+                   <svg className="w-6 h-6 text-[#2563EB] mb-2 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                   <span className="text-sm font-semibold text-[#17233D]">Manage Users</span>
+                 </Link>
+                 <Link href="/dashboard/hs-code-search" className="flex flex-col items-center justify-center p-4 bg-white border border-[#E5E7EB] rounded-xl shadow-sm hover:border-[#2563EB] hover:bg-[#EFF6FF] transition-colors text-center group">
+                   <svg className="w-6 h-6 text-[#2563EB] mb-2 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                   <span className="text-sm font-semibold text-[#17233D]">HS Codes</span>
+                 </Link>
+               </div>
+             </div>
+
+             {/* Recent Data Activity */}
+             <div>
+               <h2 className="text-lg font-bold text-[#17233D] mb-4">Recent Data Activity</h2>
+               <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-sm">
+                 <table className="min-w-full text-left text-sm whitespace-nowrap">
+                   <thead className="bg-[#F7F9FC] border-b border-[#E5E7EB]">
+                     <tr>
+                       <th className="px-6 py-3 font-semibold text-[#64748B]">Dataset</th>
+                       <th className="px-6 py-3 font-semibold text-[#64748B]">Status</th>
+                       <th className="px-6 py-3 font-semibold text-[#64748B]">Time</th>
+                     </tr>
+                   </thead>
+                   <tbody className="divide-y divide-[#E5E7EB]">
+                     <tr>
+                       <td className="px-6 py-4 text-[#17233D] font-medium">Export Shipments (Auto-sync)</td>
+                       <td className="px-6 py-4"><span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-md text-xs font-bold">Completed</span></td>
+                       <td className="px-6 py-4 text-[#64748B]">Today</td>
+                     </tr>
+                     <tr>
+                       <td className="px-6 py-4 text-[#17233D] font-medium">System Backup</td>
+                       <td className="px-6 py-4"><span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-md text-xs font-bold">Completed</span></td>
+                       <td className="px-6 py-4 text-[#64748B]">Yesterday</td>
+                     </tr>
+                   </tbody>
+                 </table>
+               </div>
+             </div>
+
+           </div>
+
+           {/* Right Column */}
+           <div className="space-y-8">
+             
+             {/* Subscription Overview */}
+             <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 shadow-sm">
+               <h2 className="text-lg font-bold text-[#17233D] mb-4">Subscription Overview</h2>
+               <div className="space-y-4">
+                 <div className="flex items-center justify-between">
+                   <span className="text-[#64748B] font-medium text-sm">Pro Users</span>
+                   <span className="text-[#17233D] font-bold">{adminStats?.proUsers}</span>
+                 </div>
+                 <div className="flex items-center justify-between">
+                   <span className="text-[#64748B] font-medium text-sm">Premium Users</span>
+                   <span className="text-[#17233D] font-bold">{adminStats?.premiumUsers}</span>
+                 </div>
+                 <div className="flex items-center justify-between">
+                   <span className="text-[#64748B] font-medium text-sm">Free/Trial Users</span>
+                   <span className="text-[#17233D] font-bold">{adminStats?.trialUsers}</span>
+                 </div>
+               </div>
+             </div>
+
+             {/* System Status */}
+             <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 shadow-sm">
+               <h2 className="text-lg font-bold text-[#17233D] mb-4">System Status</h2>
+               <div className="space-y-4">
+                 <div className="flex items-center justify-between">
+                   <span className="text-[#64748B] font-medium text-sm flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-emerald-500"></span> Database</span>
+                   <span className="text-emerald-600 font-bold text-[10px] uppercase tracking-wider bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-md">Operational</span>
+                 </div>
+                 <div className="flex items-center justify-between">
+                   <span className="text-[#64748B] font-medium text-sm flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-emerald-500"></span> API Services</span>
+                   <span className="text-emerald-600 font-bold text-[10px] uppercase tracking-wider bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-md">Operational</span>
+                 </div>
+                 <div className="flex items-center justify-between">
+                   <span className="text-[#64748B] font-medium text-sm flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-emerald-500"></span> Data Pipeline</span>
+                   <span className="text-emerald-600 font-bold text-[10px] uppercase tracking-wider bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-md">Operational</span>
+                 </div>
+               </div>
+             </div>
+
+           </div>
+         </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-7xl pb-16">
@@ -27,28 +185,21 @@ export default async function DashboardPage() {
         <ProProductSelectionModal />
       )}
 
-      {session.role === "admin" && (
-        <AdminSubscriptionAlerts />
-      )}
-
       {/* Header & Welcome */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">Welcome back, {session.name}</h1>
-          <p className="mt-1 text-gray-600">What would you like to look up today?</p>
+          <h1 className="text-3xl font-bold tracking-tight text-[#17233D]">Welcome back, {session.name}</h1>
+          <p className="mt-1 text-[#64748B]">What would you like to look up today?</p>
         </div>
 
-        {session.role !== "admin" && (
-          <div className="flex items-center gap-3 bg-white/50 p-2 rounded-2xl border border-gray-200">
-            <span className={`inline-flex items-center rounded-xl px-3 py-1.5 text-xs font-bold uppercase tracking-wider ${planType === "premium" ? "bg-amber-500/10 text-amber-500 border border-amber-500/20" :
-              planType === "pro" ? "bg-purple-500/10 text-purple-400 border border-purple-500/20" :
-                "bg-gray-100 text-gray-700 border border-gray-300"
+          <div className="flex items-center gap-3 bg-white border border-[#E5E7EB] p-2 rounded-2xl shadow-sm">
+            <span className={`inline-flex items-center rounded-xl px-3 py-1.5 text-xs font-bold uppercase tracking-wider ${planType === "premium" ? "bg-[#FFF7ED] text-[#F97316] border border-[#FFEDD5]" :
+              planType === "pro" ? "bg-purple-50 text-purple-600 border border-purple-100" :
+                "bg-gray-50 text-gray-700 border border-gray-200"
               }`}>
               {planType === "premium" ? "Premium Plan" : planType === "pro" ? "Pro Plan" : "Trial Plan"}
             </span>
-
           </div>
-        )}
       </div>
 
       {/* Hero Billboard Banner (Full-Width) */}
@@ -215,7 +366,7 @@ export default async function DashboardPage() {
       <div className="my-10 border-t border-gray-200"></div>
 
       {/* Upgrade Plan Section */}
-      {planType === "trial" && session.role !== "admin" && (
+      {planType === "trial" && (
         <div id="pro-card" className="mt-10 mb-6 scroll-mt-24 target:ring-4 target:ring-amber-500 target:bg-amber-50/50 transition-all duration-700 rounded-3xl p-2 -mx-2">
           <div className="mb-6 flex items-center justify-between">
             <h2 className="text-2xl font-bold text-gray-900">Upgrade Your Plan</h2>

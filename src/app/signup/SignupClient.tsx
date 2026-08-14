@@ -101,19 +101,21 @@ export default function SignupClient() {
 
   return (
     <>
-    <div className="relative w-full max-w-md mx-4 p-6 sm:p-8 rounded-2xl max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 bg-white dark:border-gray-200 dark:bg-white my-8">
-      <Link href="/" className="absolute right-6 top-6 text-gray-600 hover:text-slate-600 dark:hover:text-gray-700 transition-colors">
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+    <div className="relative w-full max-w-md mx-4 p-5 sm:p-6 rounded-2xl overflow-hidden shadow-2xl border border-slate-200 bg-white dark:border-gray-200 dark:bg-white z-10">
+      <Link href="/" className="absolute right-4 top-4 text-gray-600 hover:text-slate-600 dark:hover:text-gray-700 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </Link>
-      <div className="mb-8 flex flex-col items-center gap-4">
-        <Logo />
+      <div className="mb-5 flex flex-col items-center gap-2">
+        <div className="transform scale-90 origin-top">
+          <Logo />
+        </div>
           <div className="text-center">
-            <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+            <h1 className="text-xl font-bold tracking-tight text-gray-900 mb-0.5">
               {step === 1 ? "Create an Account" : "Verify Your Email"}
             </h1>
-            <p className="mt-1 text-sm text-neutral-400">
+            <p className="text-xs text-neutral-400 mb-2">
               {step === 1 ? "Sign up for your free trial" : `We sent a 6-digit code to ${email}`}
             </p>
           </div>
@@ -133,9 +135,9 @@ export default function SignupClient() {
 
         {step === 1 ? (
         <>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label htmlFor="name" className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="name" className="mb-1 block text-xs font-medium text-gray-700">
               Full Name
             </label>
             <input
@@ -150,7 +152,7 @@ export default function SignupClient() {
           </div>
 
           <div>
-            <label htmlFor="email" className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="email" className="mb-1 block text-xs font-medium text-gray-700">
               Email
             </label>
             <input
@@ -166,7 +168,7 @@ export default function SignupClient() {
           </div>
 
           <div>
-            <label htmlFor="batch" className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="batch" className="mb-1 block text-xs font-medium text-gray-700">
               Student Batch
             </label>
             <select
@@ -182,7 +184,7 @@ export default function SignupClient() {
           </div>
 
           <div>
-            <label htmlFor="businessRole" className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="businessRole" className="mb-1 block text-xs font-medium text-gray-700">
               Your Role
             </label>
             <select
@@ -198,7 +200,7 @@ export default function SignupClient() {
           </div>
 
           <div>
-            <label htmlFor="password" className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="password" className="mb-1 block text-xs font-medium text-gray-700">
               Password
             </label>
             <div className="relative">
@@ -226,10 +228,10 @@ export default function SignupClient() {
                 )}
               </button>
             </div>
-            <p className="mt-1 text-xs text-neutral-500">Minimum 6 characters</p>
+            <p className="mt-1 text-[10px] text-neutral-500">Minimum 6 characters</p>
           </div>
 
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 pt-1">
             <div className="flex items-start gap-2">
               <input
                 id="terms"
@@ -244,7 +246,7 @@ export default function SignupClient() {
                 }}
                 className="mt-1 h-4 w-4 rounded border-gray-300 text-amber-500 focus:ring-amber-500"
               />
-              <label htmlFor="terms" className="text-sm text-gray-700">
+              <label htmlFor="terms" className="text-xs text-gray-700 leading-tight">
                 I agree to the{" "}
                 <button
                   type="button"
@@ -262,7 +264,7 @@ export default function SignupClient() {
             type="button"
             onClick={handleSubmit}
             disabled={loading || !agreedToTerms}
-            className="flex w-full items-center justify-center rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-semibold text-black shadow-md transition-all hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
+            className="flex w-full items-center justify-center rounded-lg bg-amber-500 px-4 py-2 mt-2 text-sm font-semibold text-black shadow-md transition-all hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
           >
             {loading ? (
               <svg className="h-5 w-5 animate-spin text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
@@ -272,7 +274,7 @@ export default function SignupClient() {
           </button>
         </form>
         
-        <p className="mt-6 text-center text-sm text-neutral-400">
+        <p className="mt-4 text-center text-xs text-neutral-400">
           Already have an account?{" "}
           <Link href="/login" className="font-semibold text-amber-500 transition-colors hover:text-amber-400">
             Sign in
