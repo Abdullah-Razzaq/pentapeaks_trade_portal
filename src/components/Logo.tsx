@@ -24,7 +24,7 @@ export default function Logo({ className = '' }: LogoProps) {
         <div className="wordmark">
           <span className="penta">PENTA</span><span className="peaks">PEAKS</span>
         </div>
-        <div className="eyebrow">TRADE PORTAL</div>
+        <div className="eyebrow tracking-widest">INTERNATIONAL</div>
       </div>
     </div>
   );

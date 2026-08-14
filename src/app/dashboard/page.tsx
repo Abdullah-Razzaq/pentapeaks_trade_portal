@@ -27,8 +27,8 @@ export default async function DashboardPage() {
     const trialUsersRes = await pool.query("SELECT COUNT(*) FROM users WHERE plan_type = 'trial'");
     let tradeRecordsCount = 0;
     try {
-      const tradeRecordsRes = await pool.query("SELECT COUNT(*) FROM trade_data");
-      tradeRecordsCount = tradeRecordsRes.rows[0].count;
+      const tradeRecordsRes = await pool.query("SELECT COUNT(*) AS total_records FROM export_shipments");
+      tradeRecordsCount = Number(tradeRecordsRes.rows[0].total_records);
     } catch {
       // Table might not exist yet if no data uploaded
     }
