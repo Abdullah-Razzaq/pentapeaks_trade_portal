@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=JetBrains+Mono&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -28,4 +29,355 @@ body {
 input, textarea {
   -webkit-user-select: text;
   user-select: text;
+}
+
+.nav-item{
+  position:relative;
+  border-radius:7px;
+  padding:9px 14px;
+  transition:color .15s ease;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 600;
+  color: #4b5563; /* text-gray-600 */
+}
+.nav-item:hover{
+  color: #111827; /* text-gray-900 */
+}
+.nav-item.active{
+  color:#D9631A;
+  font-weight:600;
+}
+.nav-item.active::after{
+  content:"";
+  position:absolute;
+  left:14px; right:14px; bottom:2px;
+  height:2px;
+  border-radius:2px;
+  background:linear-gradient(90deg,#C6362B,#EE7B2C);
+}
+
+/* Ledger Table Styling */
+.ledger-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ledger-table th {
+  background: #FBFAF6 !important;
+  border-bottom: 1px solid #D8D2C3;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  font-weight: 800;
+  color: #D9631A;
+  padding: 12px 14px;
+}
+
+.ledger-table tr {
+  border-bottom: 1px solid #E7E2D6;
+  transition: background-color 0.15s ease;
+}
+
+.ledger-table tbody tr:hover {
+  background-color: #FCFBF8 !important;
+}
+
+.ledger-table td {
+  padding: 18px 14px;
+}
+
+/* Identifiers (NTN, HS Code, container numbers) */
+.ledger-id {
+  font-family: 'JetBrains Mono', monospace;
+  background: #FBFAF6;
+  border: 1px solid #D8D2C3;
+  border-radius: 5px;
+  padding: 3px 8px;
+  font-size: 12px;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.ledger-id-empty {
+  font-family: 'JetBrains Mono', monospace;
+  border: 1px dashed #D8D2C3;
+  border-radius: 5px;
+  padding: 3px 8px;
+  font-size: 12px;
+  display: inline-block;
+  color: #9CA3AF;
+  font-style: italic;
+  white-space: nowrap;
+}
+
+/* Primary Entity (Headline) */
+.ledger-entity-primary {
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
+  font-size: 15px;
+  color: #111827;
+}
+
+/* Secondary Entity */
+.ledger-entity-secondary {
+  color: #374151;
+}
+
+/* Location Stamp */
+.ledger-location {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  border: 1px solid #8A3B25;
+  border-radius: 3px;
+  padding: 2px 10px;
+  font-size: 10px;
+  text-transform: uppercase;
+  color: #8A3B25;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  background: transparent;
+  white-space: nowrap;
+}
+
+
+/* Description */
+.ledger-desc {
+  color: #5B6570;
+  line-height: 1.5;
+  font-size: 13px;
+}
+.ledger-desc-readmore {
+  background: transparent;
+  border: none;
+  color: #8A3B25;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s ease;
+  display: inline-block;
+  margin-top: 4px;
+}
+.ledger-desc-readmore:hover {
+  text-decoration: underline;
+  text-decoration-color: #8A3B25;
+}
+
+/* Numeric */
+.ledger-numeric {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: #111827;
+}
+.ledger-numeric-unit {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 11px;
+  color: #9CA3AF;
+  margin-left: 4px;
+}
+
+.ledger-col-numeric {
+  text-align: right;
+}
+
+@media (max-width: 767px) {
+  /* Transform Ledger Table into Cards, except when overridden */
+  .ledger-table:not(.ledger-table-scroll) { 
+    display: block; 
+    width: 100%; 
+  }
+  .ledger-table:not(.ledger-table-scroll) thead { 
+    display: none; 
+  }
+  .ledger-table:not(.ledger-table-scroll) tbody { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 1rem; 
+  }
+  .ledger-table:not(.ledger-table-scroll) tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    padding: 1rem;
+    border: 1px solid #E7E2D6;
+    border-radius: 0.75rem;
+    background: #fff;
+    position: relative;
+    white-space: normal;
+  }
+  .ledger-table:not(.ledger-table-scroll):not(.ledger-table-no-mobile) td {
+    display: flex;
+    flex-direction: column;
+    padding: 0 !important;
+    border: none !important;
+    align-items: flex-start;
+    text-align: left !important;
+    min-width: 0;
+  }
+  
+  .ledger-table:not(.ledger-table-scroll):not(.ledger-table-no-mobile) .ledger-col-numeric {
+    align-items: flex-start !important;
+    text-align: left !important;
+  }
+
+  /* Define Grid Order & Spanning */
+  
+  /* Primary Entity - Top Left */
+  .ledger-table:not(.ledger-table-scroll):not(.ledger-table-no-mobile) td:has(.ledger-entity-primary) {
+    grid-column: 1 / -1;
+    order: -10; 
+  }
+  
+  /* Date - Beside/Below Entity */
+  .ledger-table:not(.ledger-table-scroll):not(.ledger-table-no-mobile) td:has(.ledger-date) {
+    grid-column: 1 / -1;
+    order: -9;
+    margin-bottom: 0.5rem;
+    margin-top: -0.25rem;
+  }
+
+  /* Location - Top Right Stamp */
+  .ledger-table:not(.ledger-table-scroll):not(.ledger-table-no-mobile) td:has(.ledger-location) {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    order: -10;
+  }
+  .ledger-table:not(.ledger-table-scroll):not(.ledger-table-no-mobile) td:has(.ledger-location)::before {
+    display: none !important;
+  }
+  
+  /* Identifier (e.g. PCT code) */
+  .ledger-table:not(.ledger-table-scroll):not(.ledger-table-no-mobile) td:has(.ledger-id) {
+    order: -5;
+  }
+
+  /* Description - Full width at bottom */
+  .ledger-table:not(.ledger-table-scroll):not(.ledger-table-no-mobile) td:has(.ledger-desc) {
+    grid-column: 1 / -1;
+    order: 10;
+    margin-top: 0.5rem;
+    padding-top: 0.75rem !important;
+    border-top: 1px solid #f3f4f6 !important;
+  }
+  
+  .ledger-table:not(.ledger-table-scroll):not(.ledger-table-no-mobile) td.ledger-desc .ledger-desc-readmore {
+    display: inline-flex;
+    margin-top: 0.5rem;
+  }
+  
+  /* Actions - Full width at very bottom */
+  .ledger-table td:has(.ledger-actions) {
+    grid-column: 1 / -1;
+    order: 20;
+    margin-top: 0.5rem;
+    padding-top: 0.75rem !important;
+    border-top: 1px solid #f3f4f6 !important;
+    display: flex;
+    flex-direction: row;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  /* Generic Labels based on Column Type */
+  .ledger-table td::before {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    color: #94a3b8;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    letter-spacing: 0.05em;
+  }
+  
+  .ledger-table td:has(.ledger-id)::before,
+  .ledger-table td:has(.ledger-id-empty)::before { content: "Identifier"; }
+  .ledger-table td:has(.ledger-entity-secondary)::before { content: "Counterparty"; }
+  .ledger-table td:has(.ledger-col-numeric)::before, 
+  .ledger-table td:has(.ledger-numeric)::before { content: "Value / Quantity"; }
+  .ledger-table td:has(.ledger-desc)::before { content: "Description"; }
+  .ledger-table td:has(.ledger-status-pill)::before { content: "Status"; }
+  .ledger-table td:has(.ledger-actions)::before { display: none !important; }
+
+  .ledger-table tr.cursor-pointer:active {
+    background-color: #f8fafc !important;
+  }
+
+  /* Support degraded fallback for older mobile browsers without :has() */
+  @supports not selector(:has(a)) {
+    .ledger-table {
+      display: table !important;
+      width: 100% !important;
+      border-collapse: separate !important;
+      border-spacing: 0 !important;
+    }
+    .ledger-table thead {
+      display: table-header-group !important;
+    }
+    .ledger-table tbody {
+      display: table-row-group !important;
+    }
+    .ledger-table tr {
+      display: table-row !important;
+    }
+    
+    /* Solid background for cells to prevent bleed-through on sticky columns */
+    .ledger-table tbody td {
+      background: #ffffff !important;
+    }
+    .ledger-table tbody tr:nth-child(even) td {
+      background: #FCFBF8 !important;
+    }
+
+    .ledger-table td, .ledger-table th {
+      display: table-cell !important;
+      border: none !important;
+      border-bottom: 1px solid #E7E2D6 !important;
+      padding: 12px 14px !important;
+      min-width: 120px;
+      z-index: 1;
+    }
+    
+    .ledger-table th {
+      z-index: 2;
+    }
+    
+    /* Sticky first column */
+    .ledger-table th:first-child,
+    .ledger-table td:first-child {
+      position: sticky !important;
+      left: 0 !important;
+      box-shadow: 2px 0 5px rgba(0,0,0,0.05) !important;
+    }
+    
+    .ledger-table th:first-child {
+      z-index: 3 !important;
+    }
+
+    .ledger-table td::before {
+      display: none !important;
+    }
+    
+    .ledger-table-wrapper {
+      overflow-x: auto !important;
+      -webkit-overflow-scrolling: touch !important;
+      position: relative;
+    }
+    
+    .ledger-table-wrapper::before {
+      content: "Scroll to see more →";
+      display: block;
+      font-size: 0.75rem;
+      color: #64748b;
+      text-align: right;
+      padding: 0.5rem 1rem;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+      position: sticky;
+      left: 0;
+      z-index: 10;
+    }
+  }
 }

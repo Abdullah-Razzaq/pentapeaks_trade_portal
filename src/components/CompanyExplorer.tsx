@@ -66,9 +66,9 @@ function formatDate(value: string | null): string {
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-orange-100 bg-orange-50/50 px-4 py-3 print:border-gray-300 print:bg-white">
-      <p className="text-xs font-medium uppercase tracking-wide text-orange-600 print:text-gray-800">{label}</p>
-      <p className="mt-1 text-sm font-semibold text-gray-900">{value}</p>
+    <div className="rounded-xl border border-orange-100 bg-orange-50/50 px-2.5 py-2.5 sm:px-4 sm:py-3 print:border-gray-300 print:bg-white overflow-hidden">
+      <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wide text-orange-600 print:text-gray-800 truncate">{label}</p>
+      <p className="mt-0.5 sm:mt-1 text-xs sm:text-sm font-semibold text-gray-900 truncate">{value}</p>
     </div>
   );
 }
@@ -102,6 +102,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
   const [hsCodeFilter, setHsCodeFilter] = useState(searchParams.get("hsCodeFilter") || "");
   const [selectedRow, setSelectedRow] = useState<Row | null>(null);
   const [showUpgradeBanner, setShowUpgradeBanner] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   const [status, setStatus] = useState<ProductStatus | null>(null);
   const [statusLoading, setStatusLoading] = useState(false);
@@ -504,61 +505,63 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
           
           {userRole === "admin" ? (
             <div className="flex flex-col items-end mt-4 sm:mt-0">
-              <div className="flex flex-col sm:flex-row gap-4 items-center">
-              <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">
+              <div className="flex flex-col sm:flex-row gap-4 items-center w-full">
+              <div className="flex items-center justify-between w-full sm:w-auto gap-2 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">
                 <span className="text-xs font-medium text-gray-700">Total Pages: {totalPages}</span>
-                <div className="h-4 w-px bg-gray-300 mx-1"></div>
-                <label htmlFor="exportStartPage" className="text-xs text-gray-500">From:</label>
-                <input 
-                  id="exportStartPage"
-                  type="number" 
-                  min={1}
-                  max={totalPages || 1}
-                  value={exportStartPage}
-                  onChange={(e) => setExportStartPage(e.target.value === "" ? "" : parseInt(e.target.value) || 1)}
-                  onBlur={() => {
-                    if (exportStartPage === "") setExportStartPage(1);
-                  }}
-                  disabled={isExportingPdf || isExportingExcel || totalPages === 0}
-                  className="w-14 text-sm border-gray-300 rounded px-1 py-0.5 focus:ring-emerald-500 focus:border-emerald-500 disabled:bg-gray-100 disabled:text-gray-400 text-gray-900 font-bold bg-white" 
-                />
-                <label htmlFor="exportEndPage" className="text-xs text-gray-500 ml-1">To:</label>
-                <input 
-                  id="exportEndPage"
-                  type="number" 
-                  min={1}
-                  max={totalPages || 1}
-                  value={exportEndPage}
-                  onChange={(e) => setExportEndPage(e.target.value === "" ? "" : parseInt(e.target.value) || 1)}
-                  onBlur={() => {
-                    if (exportEndPage === "") setExportEndPage(Math.min(20, totalPages || 1));
-                  }}
-                  disabled={isExportingPdf || isExportingExcel || totalPages === 0}
-                  className="w-14 text-sm border-gray-300 rounded px-1 py-0.5 focus:ring-emerald-500 focus:border-emerald-500 disabled:bg-gray-100 disabled:text-gray-400 text-gray-900 font-bold bg-white" 
-                />
+                <div className="hidden sm:block h-4 w-px bg-gray-300 mx-1"></div>
+                <div className="flex items-center">
+                  <label htmlFor="exportStartPage" className="text-xs text-gray-500">From:</label>
+                  <input 
+                    id="exportStartPage"
+                    type="number" 
+                    min={1}
+                    max={totalPages || 1}
+                    value={exportStartPage}
+                    onChange={(e) => setExportStartPage(e.target.value === "" ? "" : parseInt(e.target.value) || 1)}
+                    onBlur={() => {
+                      if (exportStartPage === "") setExportStartPage(1);
+                    }}
+                    disabled={isExportingPdf || isExportingExcel || totalPages === 0}
+                    className="w-12 sm:w-14 text-sm border-gray-300 rounded px-1 py-0.5 ml-1 focus:ring-emerald-500 focus:border-emerald-500 disabled:bg-gray-100 disabled:text-gray-400 text-gray-900 font-bold bg-white" 
+                  />
+                  <label htmlFor="exportEndPage" className="text-xs text-gray-500 ml-2">To:</label>
+                  <input 
+                    id="exportEndPage"
+                    type="number" 
+                    min={1}
+                    max={totalPages || 1}
+                    value={exportEndPage}
+                    onChange={(e) => setExportEndPage(e.target.value === "" ? "" : parseInt(e.target.value) || 1)}
+                    onBlur={() => {
+                      if (exportEndPage === "") setExportEndPage(Math.min(20, totalPages || 1));
+                    }}
+                    disabled={isExportingPdf || isExportingExcel || totalPages === 0}
+                    className="w-12 sm:w-14 text-sm border-gray-300 rounded px-1 py-0.5 ml-1 focus:ring-emerald-500 focus:border-emerald-500 disabled:bg-gray-100 disabled:text-gray-400 text-gray-900 font-bold bg-white" 
+                  />
+                </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 w-full sm:w-auto">
               <button
                 onClick={() => handleExport("pdf")}
                 disabled={isExportingPdf || isExportingExcel || totalPages === 0}
-                className="flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 disabled:opacity-70 disabled:cursor-wait"
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 sm:py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 disabled:opacity-70 disabled:cursor-wait"
               >
-                {isExportingPdf ? `Generating PDF...` : (
+                {isExportingPdf ? `PDF...` : (
                   <>
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                    Download PDF
+                    PDF
                   </>
                 )}
               </button>
               <button
                 onClick={() => handleExport("excel")}
                 disabled={isExportingPdf || isExportingExcel || totalPages === 0}
-                className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-70 disabled:cursor-wait"
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 sm:py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-70 disabled:cursor-wait"
               >
-                {isExportingExcel ? `Generating Excel...` : (
+                {isExportingExcel ? `Excel...` : (
                   <>
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="17"></line><line x1="16" y1="13" x2="8" y2="17"></line></svg>
-                    Download Excel
+                    Excel
                   </>
                 )}
               </button>
@@ -591,7 +594,43 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
         </div>
       </div>
 
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row no-print">
+      <div className="mb-6 no-print">
+        {/* Mobile Filter Trigger */}
+        <button 
+          className="w-full sm:hidden flex items-center justify-center gap-2 rounded-xl bg-white border border-gray-200 py-3 shadow-sm text-sm font-semibold text-gray-700 hover:bg-gray-50"
+          onClick={() => setIsFiltersOpen(true)}
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+          </svg>
+          Filters
+          {(query || product || destinationCountry || sort !== "date_asc") && (
+            <span className="bg-amber-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold ml-1">
+              {Number(!!query) + Number(!!product) + Number(!!destinationCountry) + Number(sort !== "date_asc")}
+            </span>
+          )}
+        </button>
+
+        {/* Filters Container (Bottom Sheet on Mobile, Inline on Desktop) */}
+        <div className={`
+          fixed inset-x-0 bottom-0 z-50 transform transition-transform duration-300 ease-out
+          sm:relative sm:z-auto sm:transform-none sm:transition-none sm:flex sm:flex-row sm:gap-3
+          ${isFiltersOpen ? "translate-y-0" : "translate-y-full sm:translate-y-0"}
+        `}>
+          {/* Backdrop for Mobile */}
+          <div 
+            className={`fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity sm:hidden ${isFiltersOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+            onClick={() => setIsFiltersOpen(false)}
+          />
+          
+          <div className="relative bg-white rounded-t-2xl sm:rounded-none sm:bg-transparent p-5 pb-8 sm:p-0 flex flex-col sm:flex-row gap-3 sm:w-full mt-auto max-h-[85vh] overflow-y-auto sm:overflow-visible sm:max-h-none">
+            <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-3 sm:hidden" />
+            <div className="flex items-center justify-between sm:hidden mb-4">
+              <h3 className="text-lg font-bold text-gray-900">Filters</h3>
+              <button onClick={() => setIsFiltersOpen(false)} className="p-1.5 text-gray-400 hover:text-gray-600 bg-gray-100 rounded-full">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
         <div className="relative group w-full sm:w-64">
           <input
             value={query}
@@ -694,6 +733,15 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
           <option value="az">Sort: Name (A → Z)</option>
           <option value="za">Sort: Name (Z → A)</option>
         </select>
+            
+            <button 
+              className="mt-6 sm:hidden w-full rounded-xl bg-gray-900 py-3.5 text-sm font-semibold text-white shadow-sm"
+              onClick={() => setIsFiltersOpen(false)}
+            >
+              Apply Filters
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm no-print">
@@ -790,21 +838,23 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
         )}
       </div>
 
-      <div className="w-full overflow-x-auto rounded-xl border border-slate-200/80 shadow-sm scrollbar-thin bg-white print:border-gray-300 print:shadow-none">
+      <div className="ledger-table-wrapper w-full overflow-x-auto rounded-xl border border-slate-200/80 shadow-sm scrollbar-thin bg-white print:border-gray-300 print:shadow-none">
         <div>
-          <table className="w-full text-left text-sm print:text-xs">
-            <thead className="bg-orange-50 text-xs font-semibold uppercase tracking-wide text-orange-700 print:bg-gray-100 print:text-gray-800">
+          <table className="ledger-table ledger-table-scroll max-md:!table max-md:!border-separate max-md:!border-spacing-0 text-left text-sm print:text-xs">
+            <thead>
               {mode === "buyer" ? (
-                <tr>
-                  <th className="px-4 py-3 whitespace-nowrap">Date</th>
+                <tr className="max-md:!table-row">
+                  <th className="px-4 py-3 whitespace-nowrap max-md:!hidden">Date</th>
+                  <th className="px-4 py-3 whitespace-nowrap max-md:sticky max-md:left-0 max-md:z-10 max-md:bg-white max-md:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] hidden max-md:!table-cell">Supplier (Exporter)</th>
+                  <th className="px-4 py-3 whitespace-nowrap hidden max-md:!table-cell">Date</th>
                   <th className="px-4 py-3 min-w-[200px] whitespace-nowrap">Buyer (Importer)</th>
                   <th className="px-4 py-3 whitespace-nowrap">Destination</th>
-                  <th className="px-4 py-3 whitespace-nowrap">Supplier (Exporter)</th>
+                  <th className="px-4 py-3 whitespace-nowrap max-md:!hidden">Supplier (Exporter)</th>
                   <th className="px-4 py-3 whitespace-nowrap">HS Code (PCT)</th>
                   <th className="px-4 py-3 min-w-[300px] whitespace-nowrap">Description</th>
-                  <th className="px-4 py-3 whitespace-nowrap">Quantity & Unit</th>
+                  <th className="px-4 py-3 whitespace-nowrap ledger-col-numeric">Quantity & Unit</th>
                   <th 
-                    className={`px-4 py-3 text-right whitespace-nowrap ${isSortingDisabled ? '' : 'cursor-pointer hover:bg-orange-100 transition-colors group print:hover:bg-transparent'}`}
+                    className={`px-4 py-3 whitespace-nowrap ledger-col-numeric ${isSortingDisabled ? '' : 'cursor-pointer transition-colors group print:hover:bg-transparent'}`}
                     onClick={isSortingDisabled ? undefined : toggleSortValue}
                     title={isSortingDisabled ? "Sorting by value is available for Pro and Premium users." : "Click to sort by Value"}
                   >
@@ -819,17 +869,18 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
                   </th>
                 </tr>
               ) : (
-                <tr>
-                  <th className="px-4 py-3 whitespace-nowrap">Date</th>
-                  <th className="px-4 py-3 min-w-[200px] whitespace-nowrap">Supplier (Exporter)</th>
+                <tr className="max-md:!table-row">
+                  <th className="px-4 py-3 whitespace-nowrap max-md:!hidden">Date</th>
+                  <th className="px-4 py-3 min-w-[200px] whitespace-nowrap max-md:sticky max-md:left-0 max-md:z-10 max-md:bg-white max-md:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Supplier (Exporter)</th>
+                  <th className="px-4 py-3 whitespace-nowrap hidden max-md:!table-cell">Date</th>
                   {userRole === "admin" && <th className="px-4 py-3 whitespace-nowrap">NTN</th>}
                   <th className="px-4 py-3 whitespace-nowrap">Buyer (Importer)</th>
                   <th className="px-4 py-3 whitespace-nowrap">Destination</th>
                   <th className="px-4 py-3 whitespace-nowrap">HS Code (PCT)</th>
                   <th className="px-4 py-3 min-w-[300px] whitespace-nowrap">Description</th>
-                  <th className="px-4 py-3 whitespace-nowrap">Quantity & Unit</th>
+                  <th className="px-4 py-3 whitespace-nowrap ledger-col-numeric">Quantity & Unit</th>
                   <th 
-                    className={`px-4 py-3 text-right whitespace-nowrap ${isSortingDisabled ? '' : 'cursor-pointer hover:bg-orange-100 transition-colors group print:hover:bg-transparent'}`}
+                    className={`px-4 py-3 whitespace-nowrap ledger-col-numeric ${isSortingDisabled ? '' : 'cursor-pointer transition-colors group print:hover:bg-transparent'}`}
                     onClick={isSortingDisabled ? undefined : toggleSortValue}
                     title={isSortingDisabled ? "Sorting by value is available for Pro and Premium users." : "Click to sort by Value"}
                   >
@@ -845,7 +896,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
                 </tr>
               )}
             </thead>
-            <tbody className="divide-y divide-gray-100 print:divide-gray-300">
+            <tbody>
               {loading ? (
                 <tr>
                   <td colSpan={mode === "buyer" ? 8 : (userRole === "admin" ? 9 : 8)} className="px-4 py-10 text-center text-gray-400">
@@ -867,23 +918,23 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
               ) : (
                 rows.map((row) => (
                   mode === "buyer" ? (
-                    <tr key={row.id} onClick={() => setSelectedRow(row)} className="cursor-pointer hover:bg-orange-50/40 print:hover:bg-white">
-                      <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-xs">{formatDate(row.shipment_date)}</td>
-                      <td className="px-4 py-3 font-semibold text-gray-900">{row.company}</td>
+                    <tr key={row.id} onClick={() => setSelectedRow(row)} className="cursor-pointer print:hover:bg-white max-md:!table-row">
+                      <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-xs max-md:!hidden">{formatDate(row.shipment_date)}</td>
+                      <td className="px-4 py-3 ledger-entity-primary hidden max-md:!table-cell max-md:sticky max-md:left-0 max-md:z-10 max-md:bg-white max-md:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">{row.company}</td>
+                      <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-xs hidden max-md:!table-cell">{formatDate(row.shipment_date)}</td>
+                      <td className="px-4 py-3 ledger-entity-secondary">{row.counterparty ?? "—"}</td>
                       <td className="px-4 py-3">
                         {row.country ? (
-                          <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
+                          <span className="ledger-location !static !block !mt-0 !before:hidden">
                             {row.country}
                           </span>
                         ) : "—"}
                       </td>
-                      <td className="px-4 py-3 text-gray-600">{row.counterparty ?? "—"}</td>
+                      <td className="px-4 py-3 max-md:!hidden ledger-entity-primary">{row.company}</td>
                       <td className="px-4 py-3">
-                        <span className="font-mono text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200">
-                          {row.pct ?? "—"}
-                        </span>
+                        {row.pct ? <span className="ledger-id">{row.pct}</span> : <span className="ledger-id-empty">—</span>}
                       </td>
-                      <td className="px-4 py-3 text-gray-600">
+                      <td className="px-4 py-3 ledger-desc">
                         <div className="max-w-xs group relative print:max-w-none">
                           <div title={row.description}>
                             {expandedRows[row.id] 
@@ -895,14 +946,14 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
                           {row.description && row.description.length > 80 && (
                             <button 
                               onClick={(e) => { e.stopPropagation(); toggleExpand(row.id); }}
-                              className="text-xs text-orange-600 font-medium mt-1 hover:underline no-print"
+                              className="ledger-desc-readmore no-print"
                             >
                               {expandedRows[row.id] ? "Read Less" : "Read More"}
                             </button>
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap ledger-col-numeric">
                         {row.qty === "••••••••" ? (
                           <div className="relative group inline-block">
                             <span className="text-sm text-gray-400 blur-[3px] select-none cursor-not-allowed">123,456</span>
@@ -926,36 +977,35 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
                               </div>
                             </div>
                           </div>
-                        ) : row.value_pkr === null ? "—" : `PKR ${currencyFormatter.format(row.value_pkr as number)}`}
+                        ) : row.value_pkr === null ? "—" : (
+                          <span className="ledger-numeric">
+                            PKR {currencyFormatter.format(row.value_pkr as number)}
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ) : (
-                    <tr key={row.id} onClick={() => setSelectedRow(row)} className="cursor-pointer hover:bg-orange-50/40 print:hover:bg-white">
-                      <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-xs">{formatDate(row.shipment_date)}</td>
-                      <td className="px-4 py-3 font-semibold text-gray-900">{row.company}</td>
+                    <tr key={row.id} onClick={() => setSelectedRow(row)} className="cursor-pointer print:hover:bg-white max-md:!table-row">
+                      <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-xs max-md:!hidden">{formatDate(row.shipment_date)}</td>
+                      <td className="px-4 py-3 ledger-entity-primary max-md:sticky max-md:left-0 max-md:z-10 max-md:bg-white max-md:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">{row.company}</td>
+                      <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-xs hidden max-md:!table-cell">{formatDate(row.shipment_date)}</td>
                       {userRole === "admin" && (
                         <td className="px-4 py-3">
-                          {row.ntn ? (
-                            <span className="inline-flex items-center rounded-md bg-purple-50 px-2 py-1 text-xs font-medium text-purple-700 ring-1 ring-inset ring-purple-700/10">
-                              {row.ntn}
-                            </span>
-                          ) : "—"}
+                          {row.ntn ? <span className="ledger-id">{row.ntn}</span> : <span className="ledger-id-empty">—</span>}
                         </td>
                       )}
-                      <td className="px-4 py-3 text-gray-600">{row.counterparty ?? "—"}</td>
+                      <td className="px-4 py-3 ledger-entity-secondary">{row.counterparty ?? "—"}</td>
                       <td className="px-4 py-3">
                         {row.country ? (
-                          <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
+                          <span className="ledger-location !static !block !mt-0 !before:hidden">
                             {row.country}
                           </span>
                         ) : "—"}
                       </td>
                       <td className="px-4 py-3">
-                        <span className="font-mono text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200">
-                          {row.pct ?? "—"}
-                        </span>
+                        {row.pct ? <span className="ledger-id">{row.pct}</span> : <span className="ledger-id-empty">—</span>}
                       </td>
-                      <td className="px-4 py-3 text-gray-600">
+                      <td className="px-4 py-3 ledger-desc">
                         <div className="max-w-xs group relative print:max-w-none">
                           <div title={row.description}>
                             {expandedRows[row.id] 
@@ -967,14 +1017,14 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
                           {row.description && row.description.length > 80 && (
                             <button 
                               onClick={(e) => { e.stopPropagation(); toggleExpand(row.id); }}
-                              className="text-xs text-orange-600 font-medium mt-1 hover:underline no-print"
+                              className="ledger-desc-readmore no-print"
                             >
                               {expandedRows[row.id] ? "Read Less" : "Read More"}
                             </button>
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap ledger-col-numeric">
                         {row.qty === "••••••••" ? (
                           <div className="relative group inline-block">
                             <span className="text-sm text-gray-400 blur-[3px] select-none cursor-not-allowed">123,456</span>
@@ -985,7 +1035,12 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
                               </div>
                             </div>
                           </div>
-                        ) : row.qty ? `${numberFormatter.format(row.qty as number)} ${row.unit ?? ""}`.trim() : "—"}
+                        ) : row.qty ? (
+                          <span className="ledger-numeric">
+                            {numberFormatter.format(row.qty as number)}
+                            {row.unit && <span className="ledger-numeric-unit">{row.unit}</span>}
+                          </span>
+                        ) : "—"}
                       </td>
                       <td className="px-4 py-3 font-medium text-gray-900 text-right whitespace-nowrap">
                         {row.value_pkr === "••••••••" ? (
@@ -998,7 +1053,11 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
                               </div>
                             </div>
                           </div>
-                        ) : row.value_pkr === null ? "—" : `PKR ${currencyFormatter.format(row.value_pkr as number)}`}
+                        ) : row.value_pkr === null ? "—" : (
+                          <span className="ledger-numeric">
+                            PKR {currencyFormatter.format(row.value_pkr as number)}
+                          </span>
+                        )}
                       </td>
                     </tr>
                   )

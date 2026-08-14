@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import Image from "next/image";
+import Logo from "@/components/Logo";
 import ChangePasswordModal from "./ChangePasswordModal";
 
 type NavItem = {
@@ -28,13 +28,14 @@ export default function DashboardHeader({
   const pathname = usePathname();
   const router = useRouter();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [alertsCount, setAlertsCount] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const navItems =
     user.role === "admin"
-      ? [...baseNavItems, { href: "/dashboard/admin/users", label: "Manage Users" }, { href: "/dashboard/admin/subscriptions", label: "Our Subscriptions" }]
+      ? [...baseNavItems, { href: "/dashboard/admin/users", label: "Manage Users" }, { href: "/dashboard/admin/subscriptions", label: "Our Subscriptions" }, { href: "/dashboard/admin/data-upload", label: "Data Upload" }]
       : baseNavItems;
 
   useEffect(() => {
@@ -79,26 +80,17 @@ export default function DashboardHeader({
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-8">
           
           <div className="flex items-center gap-4">
-            <Link className="flex items-center gap-3 group" href="/dashboard">
-              <div className="flex items-center justify-center rounded-full border border-gray-300 bg-white p-1 shadow-sm transition group-hover:scale-105">
-                <Image 
-                  alt="Pentapeaks Trade Portal Logo" 
-                  className="rounded-full object-contain" 
-                  height={36}
-                  width={36}
-                  sizes="36px"
-                  priority 
-                  src="/logo.jpeg" 
-                />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xl font-bold tracking-tight text-gray-900 leading-none">
-                  Pentapeaks
-                </span>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-amber-500 mt-1">
-                  Trade Portal
-                </span>
-              </div>
+            <button 
+              className="md:hidden p-2 -ml-2 text-gray-600 hover:text-gray-900 focus:outline-none"
+              onClick={() => setIsMobileNavOpen(true)}
+              aria-label="Open navigation menu"
+            >
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            <Link className="group transition hover:opacity-90" href="/dashboard">
+              <Logo />
             </Link>
           </div>
 
@@ -109,11 +101,7 @@ export default function DashboardHeader({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                    active
-                      ? "bg-amber-500/10 text-amber-500 border border-amber-500/20"
-                      : "text-gray-600 hover:bg-white hover:text-gray-900 border border-transparent"
-                  }`}
+                  className={`nav-item ${active ? 'active' : ''}`}
                 >
                   {item.label}
                 </Link>
@@ -208,25 +196,54 @@ export default function DashboardHeader({
           </div>
         </div>
 
-        <nav className="flex gap-1.5 overflow-x-auto border-t border-gray-200 px-4 py-2.5 md:hidden hide-scrollbar">
-          {navItems.map((item) => {
-            const active = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition ${
-                  active 
-                    ? "bg-amber-500/10 text-amber-500 border border-amber-500/20" 
-                    : "text-gray-600 hover:bg-white hover:text-gray-900 border border-transparent"
-                }`}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
       </header>
+
+      {/* Mobile Drawer */}
+      <div 
+        className={`fixed inset-0 z-[60] md:hidden transition-opacity duration-300 ${isMobileNavOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+      >
+        <div 
+          className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" 
+          onClick={() => setIsMobileNavOpen(false)} 
+        />
+        <div 
+          className={`absolute inset-y-0 left-0 w-[78%] max-w-sm bg-white shadow-xl flex flex-col transform transition-transform duration-300 ${isMobileNavOpen ? "translate-x-0" : "-translate-x-full"}`}
+        >
+          <div className="flex items-center justify-between p-4 border-b border-gray-100">
+            <Logo />
+            <button 
+              onClick={() => setIsMobileNavOpen(false)}
+              className="p-2 text-gray-500 hover:bg-gray-100 rounded-full"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto py-4 flex flex-col gap-2 px-4">
+            {navItems.map((item) => {
+              const active = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setIsMobileNavOpen(false)}
+                  className={`block px-4 py-3 rounded-lg font-semibold text-[15px] transition-colors ${
+                    active 
+                      ? "text-[#D9631A] bg-orange-50 relative" 
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  }`}
+                >
+                  {item.label}
+                  {active && (
+                    <div className="absolute left-4 bottom-2 h-[2px] w-8 rounded-full bg-gradient-to-r from-[#C6362B] to-[#EE7B2C]" />
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </div>
       
       <ChangePasswordModal open={passwordModalOpen} onClose={() => setPasswordModalOpen(false)} />
     </>

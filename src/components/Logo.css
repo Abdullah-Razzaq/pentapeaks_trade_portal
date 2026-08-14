@@ -1,0 +1,10 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@600&family=Manrope:wght@800&display=swap');
+
+.logo{ display:flex; align-items:center; gap:12px; cursor:pointer; -webkit-user-select:none; user-select:none; }
+.logo svg{ display:block; flex-shrink:0; }
+.logo-text{ display:flex; flex-direction:column; line-height:1; }
+.wordmark{ font-family:'Manrope',sans-serif; font-weight:800; font-size:19px; letter-spacing:-0.01em; white-space:nowrap; }
+.wordmark .penta{ color:#1F2A33; }
+.dark .wordmark .penta{ color:#FFFFFF; }
+.wordmark .peaks{ background:linear-gradient(90deg,#C6362B,#EE7B2C); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.eyebrow{ margin-top:3px; font-family:'Inter',sans-serif; font-weight:600; font-size:9.5px; letter-spacing:.19em; color:#D9631A; }

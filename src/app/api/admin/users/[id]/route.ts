@@ -76,7 +76,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   }
   
   let query = "";
-  let queryParams: any[] = [];
+  let queryParams: (string | number | boolean | null)[] = [];
   const returningClause = "RETURNING id, name, email, role, is_active, plan_type, is_suspended, subscription_expires_at, created_at, last_activated_at, download_count";
 
   if (planType !== undefined) {

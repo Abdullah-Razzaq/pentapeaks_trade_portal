@@ -302,53 +302,59 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
       </div>
 
 
-      <div className="mt-6 w-full overflow-x-auto rounded-xl border border-slate-200/80 shadow-sm scrollbar-thin bg-white/50">
+      <div 
+        className="ledger-table-wrapper mt-6 w-full overflow-x-auto rounded-xl border border-slate-200/80 shadow-sm scrollbar-thin bg-white" 
+        style={{ WebkitOverflowScrolling: "touch" }}
+      >
+        <div className="md:hidden block text-right text-xs text-gray-500 py-2 px-4 bg-gray-50 border-b border-gray-200 font-medium">
+          Swipe to see full record &rarr;
+        </div>
         <div>
-          <table className="w-full text-left text-sm">
-            <thead className="bg-gray-100/60 text-xs font-semibold uppercase tracking-wide text-gray-600 border-b border-gray-200">
+          <table className="ledger-table ledger-table-scroll w-full text-left text-sm" style={{ borderCollapse: "separate", borderSpacing: 0 }}>
+            <thead className="bg-gray-100/60 text-xs font-semibold uppercase tracking-wide text-gray-600">
               <tr>
-                <th className="px-4 py-3 whitespace-nowrap">User</th>
-                <th className="px-4 py-3 whitespace-nowrap">Role</th>
-                <th className="px-4 py-3 whitespace-nowrap">Business Role</th>
-                <th className="px-4 py-3 whitespace-nowrap">Batch</th>
-                <th className="px-4 py-3 whitespace-nowrap">Plan</th>
-                <th className="px-4 py-3 whitespace-nowrap">Status</th>
-                <th className="px-4 py-3 whitespace-nowrap">Joined</th>
-                <th className="px-4 py-3 whitespace-nowrap">Start Date</th>
-                <th className="px-4 py-3 whitespace-nowrap">End Date</th>
-                <th className="px-4 py-3 whitespace-nowrap">Days Left</th>
-                <th className="px-4 py-3 text-right whitespace-nowrap">Action</th>
+                <th className="px-4 py-3 whitespace-nowrap sticky left-0 z-20 bg-gray-100 shadow-[1px_0_0_#e5e7eb] border-b border-gray-200">User</th>
+                <th className="px-4 py-3 whitespace-nowrap border-b border-gray-200">Role</th>
+                <th className="px-4 py-3 whitespace-nowrap border-b border-gray-200">Business Role</th>
+                <th className="px-4 py-3 whitespace-nowrap border-b border-gray-200">Batch</th>
+                <th className="px-4 py-3 whitespace-nowrap border-b border-gray-200">Plan</th>
+                <th className="px-4 py-3 whitespace-nowrap border-b border-gray-200">Status</th>
+                <th className="px-4 py-3 whitespace-nowrap border-b border-gray-200">Joined</th>
+                <th className="px-4 py-3 whitespace-nowrap border-b border-gray-200">Start Date</th>
+                <th className="px-4 py-3 whitespace-nowrap border-b border-gray-200">End Date</th>
+                <th className="px-4 py-3 whitespace-nowrap border-b border-gray-200">Days Left</th>
+                <th className="px-4 py-3 text-right whitespace-nowrap border-b border-gray-200">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/50">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-gray-500">
+                  <td colSpan={11} className="px-4 py-10 text-center text-gray-500">
                     Loading...
                   </td>
                 </tr>
               ) : listError ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-rose-500">
+                  <td colSpan={11} className="px-4 py-10 text-center text-rose-500">
                     {listError}
                   </td>
                 </tr>
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-gray-500">
+                  <td colSpan={11} className="px-4 py-10 text-center text-gray-500">
                     No users found matching your search.
                   </td>
                 </tr>
               ) : (
                 filteredUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-100/50 transition text-gray-700">
-                    <td className="px-4 py-3">
+                  <tr key={user.id} className="hover:bg-gray-50 transition text-gray-700 bg-white">
+                    <td className="px-4 py-3 sticky left-0 z-10 bg-white shadow-[1px_0_0_#e5e7eb]">
                       <div className="flex items-center gap-3">
                         <div className={`flex h-8 w-8 items-center justify-center rounded-full font-bold shrink-0 ${getAvatarStyles(user.name, user.role)}`}>
                           {user.name.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex flex-col min-w-0">
-                          <span className="font-semibold text-gray-900 truncate">{user.name}</span>
+                          <span className="font-semibold text-gray-900 truncate ledger-entity-primary">{user.name}</span>
                           <span className="text-xs text-gray-500 truncate">{user.email}</span>
                         </div>
                       </div>
@@ -358,8 +364,8 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
                     <td className="px-4 py-3 text-gray-600">{user.batch || "Not a Student"}</td>
                     <td className="px-4 py-3">
                       <span
-                        className={`rounded-full px-2.5 py-1 text-xs font-semibold tracking-wide border ${user.plan_type === "premium" ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
-                            user.plan_type === "pro" ? "bg-purple-500/10 text-purple-400 border-purple-500/20" : "bg-gray-100 text-gray-700 border-gray-300"
+                        className={`rounded-full px-2.5 py-1 text-xs font-semibold tracking-wide border ${user.plan_type === "premium" ? "bg-amber-500/10 text-amber-500 border-amber-500/20" :
+                            user.plan_type === "pro" ? "bg-purple-500/10 text-purple-600 border-purple-500/20" : "bg-gray-100 text-gray-700 border-gray-300"
                           }`}
                       >
                         {user.plan_type.toUpperCase()}
@@ -372,21 +378,21 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
                         </span>
                       ) : (
                         <span
-                          className={`rounded-full px-2.5 py-1 text-xs font-bold border ${user.is_active ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-rose-500/10 text-rose-400 border-rose-500/20"
+                          className={`rounded-full px-2.5 py-1 text-xs font-bold border ${user.is_active ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : "bg-rose-500/10 text-rose-500 border-rose-500/20"
                             }`}
                         >
                           {user.is_active ? "ACTIVE" : "INACTIVE"}
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-gray-600">
+                    <td className="px-4 py-3 text-gray-600 ledger-date">
                       {new Date(user.created_at).toLocaleDateString("en-US", {
                         month: "short",
                         day: "numeric",
                         year: "numeric"
                       })}
                     </td>
-                    <td className="px-4 py-3 text-gray-600">
+                    <td className="px-4 py-3 text-gray-600 ledger-date">
                       {(() => {
                         if (!user.subscription_start_date) return "—";
                         return new Date(user.subscription_start_date).toLocaleDateString("en-US", {
@@ -396,7 +402,7 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
                         });
                       })()}
                     </td>
-                    <td className="px-4 py-3 text-gray-600">
+                    <td className="px-4 py-3 text-gray-600 ledger-date">
                       {(() => {
                         if (!user.subscription_expires_at) return "—";
                         return new Date(user.subscription_expires_at).toLocaleDateString("en-US", {
@@ -406,7 +412,7 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
                         });
                       })()}
                     </td>
-                    <td className="px-4 py-3 text-gray-600 text-sm font-medium">
+                    <td className="px-4 py-3 text-gray-600 text-sm font-medium ledger-numeric">
                       {(() => {
                         if (!user.subscription_expires_at) return "—";
                         const daysLeft = Math.ceil((new Date(user.subscription_expires_at).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));

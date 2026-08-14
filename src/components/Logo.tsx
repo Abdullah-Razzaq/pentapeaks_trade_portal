@@ -1,26 +1,31 @@
-type LogoProps = {
-  className?: string;
-};
+import React from 'react';
+import './Logo.css';
 
-/**
- * Placeholder import/export brand mark: a circular badge with two curved
- * arrows forming an exchange loop. Swap this out once the company name
- * and final branding are confirmed.
- */
-export default function Logo({ className = "h-10 w-10" }: LogoProps) {
+interface LogoProps {
+  className?: string;
+}
+
+export default function Logo({ className = '' }: LogoProps) {
   return (
-    <svg viewBox="0 0 48 48" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="logo-gradient" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#fb923c" />
-          <stop offset="100%" stopColor="#ea580c" />
-        </linearGradient>
-      </defs>
-      <circle cx="24" cy="24" r="24" fill="url(#logo-gradient)" />
-      <path d="M14 19.5c0-3.6 2.9-6.5 6.5-6.5H27" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" />
-      <path d="M24.5 9.5l6 4-6 4" fill="#fff" />
-      <path d="M34 28.5c0 3.6-2.9 6.5-6.5 6.5H21" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" />
-      <path d="M23.5 38.5l-6-4 6-4" fill="#fff" />
-    </svg>
+    <div className={`logo ${className}`}>
+      <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+        <defs>
+          <linearGradient id="arrowGrad" x1="2" y1="22" x2="28" y2="8" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stopColor="#C6362B" />
+            <stop offset="1" stopColor="#EE7B2C" />
+          </linearGradient>
+        </defs>
+        <path d="M4 11.5 C4 7.9 7 5 10.7 5 H19" stroke="url(#arrowGrad)" strokeWidth="2.4" strokeLinecap="round" fill="none" />
+        <path d="M15.5 1.5 L19.5 5 L15.5 8.5" stroke="url(#arrowGrad)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        <path d="M26 18.5 C26 22.1 23 25 19.3 25 H11" stroke="url(#arrowGrad)" strokeWidth="2.4" strokeLinecap="round" fill="none" />
+        <path d="M14.5 28.5 L10.5 25 L14.5 21.5" stroke="url(#arrowGrad)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      </svg>
+      <div className="logo-text">
+        <div className="wordmark">
+          <span className="penta">PENTA</span><span className="peaks">PEAKS</span>
+        </div>
+        <div className="eyebrow">TRADE PORTAL</div>
+      </div>
+    </div>
   );
 }

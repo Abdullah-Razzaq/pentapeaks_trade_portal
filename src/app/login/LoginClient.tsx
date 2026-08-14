@@ -2,8 +2,9 @@
 
 import { FormEvent, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+
 import Link from "next/link";
+import Logo from "@/components/Logo";
 
 export default function LoginClient() {
   const router = useRouter();
@@ -71,16 +72,7 @@ export default function LoginClient() {
         </svg>
       </Link>
       <div className="mb-8 flex flex-col items-center gap-4">
-        <div className="relative flex h-16 w-16 min-w-16 items-center justify-center overflow-hidden rounded-full border border-gray-100 shadow-sm">
-            <Image 
-              alt="Pentapeaks Trade Portal Logo" 
-              className="scale-110 object-cover" 
-              fill 
-              priority 
-              src="/logo.jpeg" 
-              sizes="64px"
-            />
-          </div>
+        <Logo />
           <div className="text-center">
             <h1 className="text-2xl font-bold tracking-tight text-gray-900">
               Pentapeaks Trade Portal

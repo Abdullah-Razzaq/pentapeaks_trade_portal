@@ -2,8 +2,9 @@
 
 import { FormEvent, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+
 import Link from "next/link";
+import Logo from "@/components/Logo";
 
 export default function SignupClient() {
   const router = useRouter();
@@ -100,23 +101,14 @@ export default function SignupClient() {
 
   return (
     <>
-    <div className="relative w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-2xl dark:border-gray-200 dark:bg-white my-8">
+    <div className="relative w-full max-w-md mx-4 p-6 sm:p-8 rounded-2xl max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 bg-white dark:border-gray-200 dark:bg-white my-8">
       <Link href="/" className="absolute right-6 top-6 text-gray-600 hover:text-slate-600 dark:hover:text-gray-700 transition-colors">
         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </Link>
       <div className="mb-8 flex flex-col items-center gap-4">
-        <div className="relative flex h-16 w-16 min-w-16 items-center justify-center overflow-hidden rounded-full border border-gray-100 shadow-sm">
-            <Image 
-              alt="Pentapeaks Trade Portal Logo" 
-              className="scale-110 object-cover" 
-              fill 
-              priority 
-              src="/logo.jpeg" 
-              sizes="64px"
-            />
-          </div>
+        <Logo />
           <div className="text-center">
             <h1 className="text-2xl font-bold tracking-tight text-gray-900">
               {step === 1 ? "Create an Account" : "Verify Your Email"}
@@ -243,7 +235,7 @@ export default function SignupClient() {
                 id="terms"
                 type="checkbox"
                 checked={agreedToTerms}
-                onChange={(e) => {
+                onChange={() => {
                   if (!agreedToTerms) {
                     setShowTermsModal(true);
                   } else {

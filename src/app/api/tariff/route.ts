@@ -58,10 +58,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Variables prepared for future WITS / Comtrade calls:
-  const exportIso3 = exportData.iso3;
-  const exportNumeric = exportData.numericCode;
-  const importIso3 = importData.iso3;
-  const importNumeric = importData.numericCode;
+
 
   // Normalize Input HS Code: Strip all non-numeric characters
   const cleanHs = hsCode.replace(/[^0-9]/g, '');

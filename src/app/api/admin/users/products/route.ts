@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { userId, productName, hsCode } = body;
+    const { userId, productName } = body;
 
     if (!userId || !productName) {
       return NextResponse.json({ error: "Missing required fields (userId, productName)." }, { status: 400 });
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    let currentProducts = rows[0].pro_products || [];
+    const currentProducts = rows[0].pro_products || [];
     
     // Add product if it doesn't already exist
     if (!currentProducts.includes(productName)) {

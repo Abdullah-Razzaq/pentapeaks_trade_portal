@@ -2,9 +2,9 @@ import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const defaultFrom = process.env.EMAIL_FROM || "Pentapeaks Trade Portal <noreply@trade.pentapeaks.com>";
-const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-export async function sendVerificationEmail(to: string, code: string, baseUrl: string) {
+
+export async function sendVerificationEmail(to: string, code: string, _baseUrl?: string) {
   const [extractedCode] = code.split("_");
   
   try {
@@ -29,7 +29,7 @@ export async function sendVerificationEmail(to: string, code: string, baseUrl: s
   }
 }
 
-export async function sendPasswordResetEmail(to: string, code: string, baseUrl: string) {
+export async function sendPasswordResetEmail(to: string, code: string, _baseUrl?: string) {
   try {
     await resend.emails.send({
       from: defaultFrom,

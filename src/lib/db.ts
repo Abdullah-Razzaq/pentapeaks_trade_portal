@@ -9,9 +9,21 @@ function createPool(): Pool {
   if (!connectionString) {
     throw new Error("DATABASE_URL environment variable is not set.");
   }
+  // Enforce SSL certificate verification to prevent man-in-the-middle attacks.
+  // In production, rejectUnauthorized MUST be true.
+  // For local development only, it can be explicitly disabled via DB_REJECT_UNAUTHORIZED=false.
+  const isDev = process.env.NODE_ENV !== "production";
+  const rejectUnauthorized = isDev && process.env.DB_REJECT_UNAUTHORIZED === "false" ? false : true;
+  
+  const sslConfig: any = { rejectUnauthorized };
+  if (process.env.DB_CA_CERT) {
+    // If the managed Postgres provider supplies a CA certificate, load it here.
+    sslConfig.ca = process.env.DB_CA_CERT.replace(/\\n/g, '\n');
+  }
+
   return new Pool({
     connectionString,
-    ssl: { rejectUnauthorized: false },
+    ssl: sslConfig,
     max: 10,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,

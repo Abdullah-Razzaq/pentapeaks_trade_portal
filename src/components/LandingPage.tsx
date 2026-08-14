@@ -1,7 +1,8 @@
 import Link from "next/link";
-import Image from "next/image";
+
 import { getSession } from "@/lib/session";
 import Footer from "./Footer";
+import Logo from "@/components/Logo";
 
 export default async function LandingPage() {
   const session = await getSession();
@@ -11,19 +12,8 @@ export default async function LandingPage() {
       {/* Navbar */}
       <header className="sticky top-0 z-50 w-full border-b border-gray-200 bg-gray-50/80 backdrop-blur-md">
         <div className="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3">
-            <div className="relative h-8 w-8 overflow-hidden rounded-md border border-white/20">
-              <Image 
-                src="/logo.jpeg" 
-                alt="Pentapeaks Logo" 
-                fill 
-                className="object-cover" 
-                sizes="32px"
-              />
-            </div>
-            <span className="text-xl font-bold tracking-tight text-gray-900">
-              Pentapeaks
-            </span>
+          <div>
+            <Logo />
           </div>
           <nav className="hidden items-center gap-6 md:flex">
             <Link href="#products" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Products</Link>
@@ -42,16 +32,10 @@ export default async function LandingPage() {
             ) : (
               <>
                 <Link 
-                  href="/login" 
-                  className="hidden rounded-full border border-gray-300 px-5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900 sm:block"
-                >
-                  Log In
-                </Link>
-                <Link 
-                  href="/signup"
+                  href="/login"
                   className="rounded-full bg-amber-500 px-5 py-2 text-sm font-semibold text-slate-950 transition-all hover:bg-amber-600 hover:shadow-[0_0_15px_rgba(249,115,22,0.4)]"
                 >
-                  Get Started
+                  Log In
                 </Link>
               </>
             )}

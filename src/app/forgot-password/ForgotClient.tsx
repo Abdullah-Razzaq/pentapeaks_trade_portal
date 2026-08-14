@@ -2,8 +2,9 @@
 
 import { FormEvent, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+
 import Link from "next/link";
+import Logo from "@/components/Logo";
 
 export default function ForgotClient() {
   const router = useRouter();
@@ -103,25 +104,16 @@ export default function ForgotClient() {
   }
 
   return (
-    <div className="relative w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-2xl dark:border-slate-800 dark:bg-slate-900/90 my-8">
-      <Link href="/" className="absolute right-6 top-6 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+    <div className="relative w-full max-w-md mx-4 p-6 sm:p-8 rounded-2xl max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 bg-white dark:border-gray-200 dark:bg-white my-8">
+      <Link href="/" className="absolute right-6 top-6 text-gray-600 hover:text-slate-600 dark:hover:text-gray-700 transition-colors">
         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </Link>
       <div className="mb-8 flex flex-col items-center gap-4">
-        <div className="relative flex h-16 w-16 min-w-16 items-center justify-center overflow-hidden rounded-full border border-gray-100 shadow-sm">
-            <Image 
-              alt="Pentapeaks Trade Portal Logo" 
-              className="scale-110 object-cover" 
-              fill 
-              priority 
-              src="/logo.jpeg" 
-              sizes="64px"
-            />
-          </div>
+        <Logo />
           <div className="text-center">
-            <h1 className="text-2xl font-bold tracking-tight text-white">
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900">
               {step === 1 ? "Reset Password" : "Enter Reset Code"}
             </h1>
             <p className="mt-1 text-sm text-neutral-400">
@@ -145,7 +137,7 @@ export default function ForgotClient() {
         {step === 1 && (
           <form onSubmit={handleSendCode} className="space-y-4">
             <div>
-              <label htmlFor="email" className="mb-1 block text-sm font-medium text-neutral-300">
+              <label htmlFor="email" className="mb-1 block text-sm font-medium text-gray-700">
                 Email Address
               </label>
               <input
@@ -154,7 +146,7 @@ export default function ForgotClient() {
                 required
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                className="w-full rounded-lg border border-neutral-700 bg-neutral-800/50 px-3 py-2 text-sm text-neutral-100 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 placeholder:text-gray-400"
                 placeholder="you@gmail.com"
               />
             </div>
@@ -176,7 +168,7 @@ export default function ForgotClient() {
         {step === 2 && (
           <form onSubmit={handleResetPassword} className="space-y-4">
             <div>
-              <label htmlFor="code" className="mb-1 block text-sm font-medium text-neutral-300">
+              <label htmlFor="code" className="mb-1 block text-sm font-medium text-gray-700">
                 6-Digit Verification Code
               </label>
               <input
@@ -186,13 +178,13 @@ export default function ForgotClient() {
                 maxLength={6}
                 value={code}
                 onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
-                className="w-full rounded-lg border border-neutral-700 bg-neutral-800/50 px-3 py-2 text-center text-2xl tracking-[0.5em] text-neutral-100 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-center text-2xl tracking-[0.5em] text-gray-900 outline-none transition focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 placeholder:text-gray-400"
                 placeholder="000000"
               />
             </div>
             
             <div className="relative">
-              <label htmlFor="newPassword" className="mb-1 block text-sm font-medium text-neutral-300">
+              <label htmlFor="newPassword" className="mb-1 block text-sm font-medium text-gray-700">
                 New Password
               </label>
               <input
@@ -202,7 +194,7 @@ export default function ForgotClient() {
                 minLength={6}
                 value={newPassword}
                 onChange={(event) => setNewPassword(event.target.value)}
-                className="w-full rounded-lg border border-neutral-700 bg-neutral-800/50 px-3 py-2 text-sm text-neutral-100 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 placeholder:text-gray-400"
                 placeholder="••••••••"
               />
               <button
@@ -220,7 +212,7 @@ export default function ForgotClient() {
             </div>
             
             <div className="relative">
-              <label htmlFor="confirmPassword" className="mb-1 block text-sm font-medium text-neutral-300">
+              <label htmlFor="confirmPassword" className="mb-1 block text-sm font-medium text-gray-700">
                 Confirm Password
               </label>
               <input
@@ -230,7 +222,7 @@ export default function ForgotClient() {
                 minLength={6}
                 value={confirmPassword}
                 onChange={(event) => setConfirmPassword(event.target.value)}
-                className="w-full rounded-lg border border-neutral-700 bg-neutral-800/50 px-3 py-2 text-sm text-neutral-100 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 placeholder:text-gray-400"
                 placeholder="••••••••"
               />
             </div>

@@ -81,8 +81,8 @@ export async function enforceSearchSecurity(session: SessionPayload, planType: s
   if (session.role === "admin") return null;
 
   // 1. Rate limiting
-  // Increased rate limit to prevent 429 during normal pagination for all users
-  const limit = planType === "pro" ? 300 : 180;
+  // 100 requests per minute for pro users, 50 for trial users
+  const limit = planType === "pro" ? 100 : 50;
   const rateLimit = checkRateLimit(`user_${session.userId}`, limit);
   if (!rateLimit.success) {
     if (rateLimit.isSuspended) {

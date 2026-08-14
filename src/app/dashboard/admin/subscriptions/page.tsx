@@ -145,16 +145,16 @@ export default function SubscriptionsPage() {
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow border border-gray-200 overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
+      <div className="ledger-table-wrapper bg-white rounded-xl shadow border border-gray-200 overflow-x-auto scrollbar-thin">
+        <table className="ledger-table min-w-full divide-y divide-gray-200 text-left text-sm">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subscription Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alert Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Renew Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              <th className="px-6 py-3 font-medium text-gray-500 uppercase tracking-wider">Subscription Name</th>
+              <th className="px-6 py-3 font-medium text-gray-500 uppercase tracking-wider">Start Date</th>
+              <th className="px-6 py-3 font-medium text-gray-500 uppercase tracking-wider">Alert Date</th>
+              <th className="px-6 py-3 font-medium text-gray-500 uppercase tracking-wider">Renew Date</th>
+              <th className="px-6 py-3 font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th className="px-6 py-3 font-medium text-gray-500 uppercase tracking-wider text-right ledger-col-numeric">Actions</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -167,42 +167,44 @@ export default function SubscriptionsPage() {
             ) : (
               subscriptions.map((sub) => (
                 <tr key={sub.id} className={getRowHighlight(sub.renew_date, sub.is_active)}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 ledger-entity-primary">
                     {sub.subscription_name}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 ledger-date">
                     {new Date(sub.start_date).toLocaleDateString()}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-orange-600 font-medium">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-orange-600 font-medium ledger-date">
                     {new Date(sub.alert_date).toLocaleDateString()}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-medium">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-medium ledger-date">
                     {new Date(sub.renew_date).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${sub.is_active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
-                      {sub.is_active ? "Active" : "Inactive"}
+                    <span className={`ledger-status-pill px-2.5 py-1 text-xs font-semibold rounded-full border ${sub.is_active ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "bg-red-500/10 text-red-500 border-red-500/20"}`}>
+                      {sub.is_active ? "ACTIVE" : "INACTIVE"}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
-                    <button
-                      onClick={() => toggleStatus(sub.id, sub.is_active)}
-                      className="text-blue-600 hover:text-blue-900 transition-colors"
-                    >
-                      {sub.is_active ? "Deactivate" : "Activate"}
-                    </button>
-                    <button
-                      onClick={() => handleRenew(sub.id)}
-                      className="text-green-600 hover:text-green-900 transition-colors font-bold"
-                    >
-                      Renew
-                    </button>
-                    <button
-                      onClick={() => handleDelete(sub.id)}
-                      className="text-red-600 hover:text-red-900 transition-colors font-bold"
-                    >
-                      Delete
-                    </button>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium ledger-actions">
+                    <div className="flex items-center justify-end gap-2 sm:gap-3">
+                      <button
+                        onClick={() => toggleStatus(sub.id, sub.is_active)}
+                        className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-semibold text-gray-600 transition hover:border-blue-500/50 hover:bg-blue-500/10 hover:text-blue-500 flex items-center justify-center h-8 whitespace-nowrap"
+                      >
+                        {sub.is_active ? "Deactivate" : "Activate"}
+                      </button>
+                      <button
+                        onClick={() => handleRenew(sub.id)}
+                        className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-semibold text-gray-600 transition hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:text-emerald-500 flex items-center justify-center h-8 whitespace-nowrap"
+                      >
+                        Renew
+                      </button>
+                      <button
+                        onClick={() => handleDelete(sub.id)}
+                        className="rounded-lg border border-red-300 px-2.5 py-1.5 text-xs font-semibold text-red-500 transition hover:bg-red-50 flex items-center justify-center h-8 whitespace-nowrap"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
