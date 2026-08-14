@@ -47,7 +47,7 @@ export async function proxy(request: NextRequest) {
 
   // 2. Auth Rate Limiting
   if (pathname.startsWith("/api/auth/")) {
-    const ip = request.ip ?? request.headers.get('x-forwarded-for') ?? 'unknown';
+    const ip = (request as NextRequest & { ip?: string }).ip ?? request.headers.get('x-forwarded-for') ?? 'unknown';
     const now = Date.now();
     const userRequests = authRequestLog.get(ip) || [];
     const validRequests = userRequests.filter(timestamp => now - timestamp < AUTH_RATE_LIMIT_WINDOW_MS);
