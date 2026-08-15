@@ -142,7 +142,7 @@ export default function DashboardShell({
   }
 
   return (
-    <div className="flex h-screen w-full bg-[#F7F9FC] text-[#17233D] overflow-hidden font-sans">
+    <div className="flex h-full w-full bg-[#F7F9FC] text-[#17233D] overflow-hidden font-sans">
       
       {/* 
         -----------------------------------------
@@ -252,7 +252,7 @@ export default function DashboardShell({
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         
         {/* Top Bar */}
-        <header className="h-[60px] bg-white border-b border-[#E5E7EB] flex items-center justify-between px-4 sm:px-6 z-10 shrink-0">
+        <header className="h-[60px] bg-white border-b border-[#E5E7EB] flex items-center justify-between px-4 sm:px-6 z-40 shrink-0 relative">
           
           <div className="flex items-center gap-4">
             <button 
