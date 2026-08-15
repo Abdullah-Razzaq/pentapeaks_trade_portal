@@ -74,13 +74,10 @@ export async function POST(request: NextRequest) {
       [verificationToken, normalizedEmail, name, passwordHash, batch, business_role, verificationExpiresAt]
     );
 
-    // Dynamic Base URL handling
-    const origin = request.headers.get("origin");
-    const baseUrl = origin || process.env.NEXT_PUBLIC_APP_URL || "https://trade.pentapeaks.com";
 
     // 4. Send Email
     try {
-      await sendVerificationEmail(normalizedEmail, verificationToken, baseUrl);
+      await sendVerificationEmail(normalizedEmail, verificationToken);
     } catch (emailError) {
       console.error("Failed to send verification email:", emailError);
       return NextResponse.json({ error: "Failed to send verification email. Please try again." }, { status: 500 });
