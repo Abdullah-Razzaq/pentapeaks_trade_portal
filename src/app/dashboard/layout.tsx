@@ -3,6 +3,7 @@ import { getSession } from "@/lib/session";
 import DashboardShell from "@/components/DashboardShell";
 import { pool } from "@/lib/db";
 import CopyProtection from "@/components/CopyProtection";
+import SessionTimeoutProvider from "@/components/providers/SessionTimeoutProvider";
 
 export default async function DashboardLayout({
   children,
@@ -30,7 +31,7 @@ export default async function DashboardLayout({
   }
 
   return (
-    <>
+    <SessionTimeoutProvider>
       <CopyProtection isAdmin={session.role === "admin"} />
       {planType === "trial" && session.role !== "admin" && (
         <div className="w-full bg-amber-500/15 border-b border-amber-500/30 text-amber-900 px-4 py-2 text-center text-sm font-semibold shadow-sm backdrop-blur-sm fixed top-0 z-[100]">
@@ -48,6 +49,6 @@ export default async function DashboardLayout({
       >
         {children}
       </DashboardShell>
-    </>
+    </SessionTimeoutProvider>
   );
 }

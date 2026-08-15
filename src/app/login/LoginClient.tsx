@@ -26,6 +26,10 @@ export default function LoginClient() {
         setTimeout(() => {
           setSuccessMsg("Password reset successfully! Please sign in with your new password.");
         }, 0);
+      } else if (searchParams.get("reason") === "timeout") {
+        setTimeout(() => {
+          setError("Your session expired due to inactivity. Please sign in again.");
+        }, 0);
       }
     }
   }, []);
