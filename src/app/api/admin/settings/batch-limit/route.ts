@@ -7,7 +7,7 @@ const updateLimitSchema = z.object({
   current_max_batch: z.number().int().min(0).max(100),
 });
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
     await pool.query('CREATE TABLE IF NOT EXISTS settings (key VARCHAR PRIMARY KEY, value VARCHAR)');
     await pool.query("INSERT INTO settings (key, value) VALUES ('current_max_batch', '15') ON CONFLICT (key) DO NOTHING");

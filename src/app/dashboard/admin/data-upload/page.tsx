@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import * as XLSX from "xlsx";
 
 export default function DataUploadPage() {
@@ -49,7 +49,7 @@ export default function DataUploadPage() {
         const sheet = workbook.Sheets[sheetName];
         
         // Read top row for headers and total length for rows
-        const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: "" });
+        const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
         const headers = rows.length > 0 ? Object.keys(rows[0]) : [];
         
         return {
@@ -102,8 +102,8 @@ export default function DataUploadPage() {
       setFiles([]);
       setPreviewData([]);
       if (fileInputRef.current) fileInputRef.current.value = "";
-    } catch (err: any) {
-      setError(err.message || "An unexpected error occurred during upload.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "An unexpected error occurred during upload.");
     } finally {
       setIsUploading(false);
     }

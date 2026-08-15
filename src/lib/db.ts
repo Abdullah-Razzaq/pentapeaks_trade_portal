@@ -15,7 +15,7 @@ function createPool(): Pool {
   const isDev = process.env.NODE_ENV !== "production";
   const rejectUnauthorized = isDev && process.env.DB_REJECT_UNAUTHORIZED === "false" ? false : true;
   
-  const sslConfig: any = { rejectUnauthorized };
+  const sslConfig: Record<string, boolean | string> = { rejectUnauthorized };
   if (process.env.DB_CA_CERT) {
     // If the managed Postgres provider supplies a CA certificate, load it here.
     sslConfig.ca = process.env.DB_CA_CERT.replace(/\\n/g, '\n');

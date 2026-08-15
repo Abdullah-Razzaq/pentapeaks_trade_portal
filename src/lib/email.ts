@@ -4,7 +4,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const defaultFrom = process.env.EMAIL_FROM || "Pentapeaks Trade Portal <noreply@trade.pentapeaks.com>";
 
 
-export async function sendVerificationEmail(to: string, code: string, _baseUrl?: string) {
+export async function sendVerificationEmail(to: string, code: string) {
   const [extractedCode] = code.split("_");
   
   try {
@@ -29,7 +29,7 @@ export async function sendVerificationEmail(to: string, code: string, _baseUrl?:
   }
 }
 
-export async function sendPasswordResetEmail(to: string, code: string, _baseUrl?: string) {
+export async function sendPasswordResetEmail(to: string, code: string) {
   try {
     await resend.emails.send({
       from: defaultFrom,
