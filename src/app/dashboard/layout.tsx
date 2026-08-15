@@ -35,7 +35,7 @@ export default async function DashboardLayout({
       <CopyProtection isAdmin={session.role === "admin"} />
       <div className="flex flex-col h-screen overflow-hidden w-full">
         {planType === "trial" && session.role !== "admin" && (
-          <div className="w-full bg-amber-500/15 border-b border-amber-500/30 text-amber-900 px-4 py-2 text-center text-sm font-semibold shadow-sm shrink-0 relative z-[100]">
+          <div className="w-full bg-amber-50 border-b border-amber-200 text-amber-800 px-4 py-2 text-center text-sm font-semibold shadow-sm shrink-0 relative z-[100]">
             Your 1-day free trial is active. Upgrade to Pro to unlock unlimited access and prevent loss of access.
           </div>
         )}
