@@ -920,9 +920,9 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
                   mode === "buyer" ? (
                     <tr key={row.id} onClick={() => setSelectedRow(row)} className="cursor-pointer print:hover:bg-white max-md:!table-row">
                       <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-xs max-md:!hidden">{formatDate(row.shipment_date)}</td>
-                      <td className="px-4 py-3 ledger-entity-primary hidden max-md:!table-cell max-md:sticky max-md:left-0 max-md:z-10 max-md:bg-white max-md:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">{row.company}</td>
+                      <td className="px-4 py-3 ledger-entity-secondary hidden max-md:!table-cell max-md:sticky max-md:left-0 max-md:z-10 max-md:bg-white max-md:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">{row.counterparty ?? "—"}</td>
                       <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-xs hidden max-md:!table-cell">{formatDate(row.shipment_date)}</td>
-                      <td className="px-4 py-3 ledger-entity-secondary">{row.counterparty ?? "—"}</td>
+                      <td className="px-4 py-3 ledger-entity-primary">{row.company}</td>
                       <td className="px-4 py-3">
                         {row.country ? (
                           <span className="ledger-location !static !block !mt-0 !before:hidden">
@@ -930,7 +930,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
                           </span>
                         ) : "—"}
                       </td>
-                      <td className="px-4 py-3 max-md:!hidden ledger-entity-primary">{row.company}</td>
+                      <td className="px-4 py-3 max-md:!hidden ledger-entity-secondary">{row.counterparty ?? "—"}</td>
                       <td className="px-4 py-3">
                         {row.pct ? <span className="ledger-id">{row.pct}</span> : <span className="ledger-id-empty">—</span>}
                       </td>
