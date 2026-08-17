@@ -14,14 +14,19 @@ type ActivityLog = {
 export default function RecentDataActivity() {
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [totalLogs, setTotalLogs] = useState(0);
+  const [page, setPage] = useState(1);
+  const limit = 5;
 
   useEffect(() => {
     async function fetchLogs() {
       try {
-        const res = await fetch("/api/admin/recent-activity");
+        const offset = (page - 1) * limit;
+        const res = await fetch(`/api/admin/recent-activity?limit=${limit}&offset=${offset}`);
         if (res.ok) {
           const data = await res.json();
           setLogs(data.logs || []);
+          setTotalLogs(data.total || 0);
         }
       } catch (error) {
         console.error("Failed to fetch recent activity logs:", error);
@@ -35,7 +40,32 @@ export default function RecentDataActivity() {
     // Auto-refresh every 30 seconds
     const interval = setInterval(fetchLogs, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [page, limit]);
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this log?")) return;
+    try {
+      const res = await fetch(`/api/admin/recent-activity?id=${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        // Optimistically remove from state or trigger re-fetch.
+        // For simplicity, just triggering a re-fetch of current page:
+        setLoading(true);
+        const offset = (page - 1) * limit;
+        const fetchRes = await fetch(`/api/admin/recent-activity?limit=${limit}&offset=${offset}`);
+        if (fetchRes.ok) {
+          const data = await fetchRes.json();
+          setLogs(data.logs || []);
+          setTotalLogs(data.total || 0);
+        }
+        setLoading(false);
+      } else {
+        alert("Failed to delete log");
+      }
+    } catch (error) {
+      console.error("Failed to delete log:", error);
+      alert("Error deleting log");
+    }
+  };
 
   const getRelativeTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -79,16 +109,17 @@ export default function RecentDataActivity() {
               <th className="px-6 py-3 font-semibold text-[#64748B]">Dataset</th>
               <th className="px-6 py-3 font-semibold text-[#64748B]">Status</th>
               <th className="px-6 py-3 font-semibold text-[#64748B]">Time</th>
+              <th className="px-6 py-3 font-semibold text-[#64748B] text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#E5E7EB]">
             {loading && logs.length === 0 ? (
               <tr>
-                <td colSpan={3} className="px-6 py-8 text-center text-[#64748B]">Loading logs...</td>
+                <td colSpan={4} className="px-6 py-8 text-center text-[#64748B]">Loading logs...</td>
               </tr>
             ) : logs.length === 0 ? (
               <tr>
-                <td colSpan={3} className="px-6 py-8 text-center text-[#64748B]">No recent activity found.</td>
+                <td colSpan={4} className="px-6 py-8 text-center text-[#64748B]">No recent activity found.</td>
               </tr>
             ) : (
               logs.map((log) => (
@@ -103,11 +134,44 @@ export default function RecentDataActivity() {
                   </td>
                   <td className="px-6 py-4">{getStatusBadge(log.status)}</td>
                   <td className="px-6 py-4 text-[#64748B]">{getRelativeTime(log.created_at)}</td>
+                  <td className="px-6 py-4 text-right">
+                    <button 
+                      onClick={() => handleDelete(log.id)}
+                      className="text-red-500 hover:text-red-700 text-sm font-medium transition-colors"
+                      title="Delete log"
+                    >
+                      Delete
+                    </button>
+                  </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
+        
+        {/* Pagination Slider */}
+        {totalLogs > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-[#E5E7EB] bg-white gap-4">
+            <span className="text-sm text-[#64748B]">
+              Showing {Math.min((page - 1) * limit + 1, totalLogs)} to {Math.min(page * limit, totalLogs)} of {totalLogs} records
+            </span>
+            {Math.ceil(totalLogs / limit) > 1 && (
+              <div className="flex items-center gap-4">
+                <span className="text-sm font-medium text-gray-700">
+                  Page {page} of {Math.ceil(totalLogs / limit)}
+                </span>
+                <input 
+                  type="range" 
+                  min="1" 
+                  max={Math.ceil(totalLogs / limit)} 
+                  value={page} 
+                  onChange={(e) => setPage(parseInt(e.target.value))} 
+                  className="w-32 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-500" 
+                />
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
