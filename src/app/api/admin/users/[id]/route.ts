@@ -111,7 +111,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (isNaN(months) || months < 1) {
       return NextResponse.json({ error: "Invalid months value" }, { status: 400 });
     }
-    query = `UPDATE users SET data_access_months = $1, updated_at = NOW() WHERE id = $2 ${returningClause}`;
+    query = `UPDATE users SET data_access_months = $1 WHERE id = $2 ${returningClause}`;
     queryParams = [months, userId];
   } else {
     return NextResponse.json({ error: "No valid fields to update." }, { status: 400 });
