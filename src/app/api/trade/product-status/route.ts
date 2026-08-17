@@ -47,17 +47,27 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const cteStr = `
-    WITH product_start AS (
-      SELECT MIN(date) AS earliest_record_date
+  const cteStr = isAdmin
+    ? `
+    WITH scoped_records AS (
+      SELECT s.*
+      FROM export_shipments s
+      WHERE (s.description ILIKE '%' || $1 || '%' OR REPLACE(to_char(s.pct, 'FM0000.0000'), '.', '') ILIKE '%' || $1 || '%')
+    )
+  `
+    : `
+    WITH distinct_months AS (
+      SELECT DISTINCT DATE_TRUNC('month', date) AS month_start
       FROM export_shipments
       WHERE (description ILIKE '%' || $1 || '%' OR REPLACE(to_char(pct, 'FM0000.0000'), '.', '') ILIKE '%' || $1 || '%')
+      ORDER BY month_start ASC
+      LIMIT $2::int
     ),
     scoped_records AS (
       SELECT s.*
-      FROM export_shipments s, product_start ps
+      FROM export_shipments s
+      JOIN distinct_months dm ON DATE_TRUNC('month', s.date) = dm.month_start
       WHERE (s.description ILIKE '%' || $1 || '%' OR REPLACE(to_char(s.pct, 'FM0000.0000'), '.', '') ILIKE '%' || $1 || '%')
-        AND ($2::int IS NULL OR (ps.earliest_record_date IS NOT NULL AND s.date >= ps.earliest_record_date AND s.date < ps.earliest_record_date + ($2 || ' month')::INTERVAL))
     )
   `;
 

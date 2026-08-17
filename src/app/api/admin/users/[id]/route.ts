@@ -104,7 +104,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     query = `UPDATE users SET is_suspended = $1 WHERE id = $2 ${returningClause}`;
     queryParams = [isSuspended, userId];
   } else if (dataAccessMonths !== undefined) {
-    query = `UPDATE users SET data_access_months = $1 WHERE id = $2 ${returningClause}`;
+    query = `UPDATE users SET data_access_months = $1, updated_at = NOW() WHERE id = $2 ${returningClause}`;
     queryParams = [dataAccessMonths, userId];
   } else {
     return NextResponse.json({ error: "No valid fields to update." }, { status: 400 });
