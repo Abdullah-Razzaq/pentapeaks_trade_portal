@@ -233,7 +233,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
 
   useEffect(() => {
     const handle = setTimeout(() => {
-      const hsPrefix = product.trim().split(" ")[0] || product.trim();
+      const hsPrefix = product.trim();
       if (hsPrefix) {
         // setStatusLoading(true); // Replaced by general UI loading if needed
         setStatusError(null);
