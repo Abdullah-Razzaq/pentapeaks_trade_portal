@@ -132,7 +132,10 @@ export async function GET(request: NextRequest) {
      SELECT COUNT(*)
      FROM allowed_records`;
 
-  const countResult = await pool.query(countQuery, [company, product, destination_country, hs_code, proKeywordSearch, proRegexSearch, dataAccessMonths]);
+  const countParams = isAdmin
+    ? [company, product, destination_country, hs_code, proKeywordSearch, proRegexSearch]
+    : [company, product, destination_country, hs_code, proKeywordSearch, proRegexSearch, dataAccessMonths];
+  const countResult = await pool.query(countQuery, countParams);
   
   let total = parseInt(countResult.rows[0].count, 10);
   
@@ -240,7 +243,10 @@ export async function GET(request: NextRequest) {
          ${orderClause}
          LIMIT $7 OFFSET $8`;
 
-    const { rows: dataRows } = await pool.query(dataQuery, [company, product, destination_country, hs_code, proKeywordSearch, proRegexSearch, actualLimit, offset, dataAccessMonths]);
+    const dataParams = isAdmin
+      ? [company, product, destination_country, hs_code, proKeywordSearch, proRegexSearch, actualLimit, offset]
+      : [company, product, destination_country, hs_code, proKeywordSearch, proRegexSearch, actualLimit, offset, dataAccessMonths];
+    const { rows: dataRows } = await pool.query(dataQuery, dataParams);
     rows = dataRows;
   }
   
