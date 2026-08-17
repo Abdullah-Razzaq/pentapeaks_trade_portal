@@ -81,31 +81,67 @@ export default function DataUploadPage() {
     setError(null);
     setUploadResult(null);
     
-    const formData = new FormData();
-    files.forEach(f => formData.append("file", f));
-
     try {
-      const res = await fetch("/api/admin/data/upload", {
-        method: "POST",
-        body: formData,
-      });
-      
-      const contentType = res.headers.get("content-type");
-      let data;
-      if (contentType && contentType.includes("application/json")) {
-        data = await res.json();
-      } else {
-        const text = await res.text();
-        throw new Error(`Server Error (${res.status}): ${text.substring(0, 50)}...`);
+      let totalProcessedAll = 0;
+      let totalInsertedAll = 0;
+      let totalUpdatedAll = 0;
+
+      for (const file of files) {
+        const buffer = await file.arrayBuffer();
+        const workbook = XLSX.read(buffer, { type: "buffer" });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
+
+        if (rawRows.length === 0) continue;
+
+        const BATCH_SIZE = 2500;
+        let logId: number | null = null;
+
+        for (let i = 0; i < rawRows.length; i += BATCH_SIZE) {
+          const chunk = rawRows.slice(i, i + BATCH_SIZE);
+          const isFirstChunk = i === 0;
+          const isLastChunk = i + BATCH_SIZE >= rawRows.length;
+
+          const uploadResponse = await fetch("/api/admin/data/upload", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              fileName: file.name,
+              fileSize: file.size,
+              chunk,
+              isFirstChunk,
+              isLastChunk,
+              logId
+            })
+          });
+
+          const contentType = uploadResponse.headers.get("content-type");
+          let data: { error?: string; logId?: number; processed?: number; inserted?: number; updated?: number };
+          if (contentType && contentType.includes("application/json")) {
+            data = await uploadResponse.json();
+          } else {
+            const text = await uploadResponse.text();
+            throw new Error(`Server Error (${uploadResponse.status}): ${text.substring(0, 50)}...`);
+          }
+
+          if (!uploadResponse.ok) throw new Error(data?.error || "Upload failed");
+          
+          if (isFirstChunk) {
+            logId = data.logId ?? null;
+          }
+
+          totalProcessedAll += data.processed || 0;
+          totalInsertedAll += data.inserted || 0;
+          totalUpdatedAll += data.updated || 0;
+        }
       }
-      
-      if (!res.ok) throw new Error(data?.error || "Upload failed");
-      
+
       setUploadResult({
         success: true,
-        totalProcessed: data.totalProcessed,
-        inserted: data.inserted,
-        updated: data.updated
+        totalProcessed: totalProcessedAll,
+        inserted: totalInsertedAll,
+        updated: totalUpdatedAll
       });
       setFiles([]);
       setPreviewData([]);
