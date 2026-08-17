@@ -8,7 +8,7 @@ const updateUserSchema = z.object({
   planType: z.enum(["trial", "pro", "premium"]).optional(),
   batch: z.string().nullable().optional(),
   isSuspended: z.boolean().optional(),
-  dataAccessMonths: z.number().nullable().optional(),
+  data_access_months: z.number().nullable().optional(),
 });
 
 export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -62,7 +62,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ error: "Invalid input." }, { status: 400 });
   }
 
-  const { isActive, planType, batch, isSuspended, dataAccessMonths } = parsed.data;
+  const { isActive, planType, batch, isSuspended, data_access_months } = parsed.data;
 
   if (userId === session.userId && (isActive !== undefined || planType !== undefined || isSuspended !== undefined)) {
     return NextResponse.json({ error: "You cannot change your own account status or plan." }, { status: 400 });
@@ -103,9 +103,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   } else if (isSuspended !== undefined) {
     query = `UPDATE users SET is_suspended = $1 WHERE id = $2 ${returningClause}`;
     queryParams = [isSuspended, userId];
-  } else if (dataAccessMonths !== undefined) {
+  } else if (data_access_months !== undefined) {
     query = `UPDATE users SET data_access_months = $1, updated_at = NOW() WHERE id = $2 ${returningClause}`;
-    queryParams = [dataAccessMonths, userId];
+    queryParams = [data_access_months, userId];
   } else {
     return NextResponse.json({ error: "No valid fields to update." }, { status: 400 });
   }

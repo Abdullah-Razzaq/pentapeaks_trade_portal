@@ -317,17 +317,17 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
     }
   };
 
-  const handleUpdateDataAccess = async (user: User, months: number | null) => {
-    setTogglingId(user.id);
+  const handleUpdateDataAccess = async (userId: number, months: number) => {
+    setTogglingId(userId);
     try {
-      const res = await fetch(`/api/admin/users/${user.id}`, {
+      const res = await fetch(`/api/admin/users/${userId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dataAccessMonths: months }),
+        body: JSON.stringify({ data_access_months: months }),
       });
       if (!res.ok) throw new Error("Failed to update data access limit");
       setUsers((prev) =>
-        prev.map((u) => (u.id === user.id ? { ...u, data_access_months: months } : u))
+        prev.map((u) => (u.id === userId ? { ...u, data_access_months: months } : u))
       );
     } catch (e) {
       console.error(e);
@@ -582,23 +582,22 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
                                 <span>Renew</span>
                               </button>
                               
-                              <div className="px-3 py-2 border-b border-t border-gray-100 mt-1 mb-1">
-                                <label className="block text-[10px] uppercase font-bold text-gray-400 mb-1 tracking-wider">Data Access</label>
-                                <select
-                                  className="w-full rounded border border-gray-200 text-xs px-2 py-1 h-8 bg-white text-gray-700 outline-none focus:ring-2 focus:ring-amber-500/20"
-                                  value={user.data_access_months === null ? "null" : user.data_access_months}
-                                  onChange={(e) => {
-                                    const val = e.target.value === "null" ? null : parseInt(e.target.value, 10);
-                                    handleUpdateDataAccess(user, val);
-                                  }}
+                              <div className="px-3 py-2 border-t border-gray-100 mt-1">
+                                <label className="text-[10px] font-semibold uppercase text-gray-400 block mb-1">
+                                  DATA ACCESS
+                                </label>
+                                <select 
+                                  value={user.data_access_months || 1} 
+                                  onChange={(e) => handleUpdateDataAccess(user.id, Number(e.target.value))}
                                   disabled={togglingId === user.id}
+                                  className="w-full text-xs border border-gray-200 rounded p-1 text-gray-700 bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
                                 >
                                   <option value={1}>1 Month (Default)</option>
                                   <option value={2}>2 Months</option>
                                   <option value={3}>3 Months</option>
                                   <option value={6}>6 Months</option>
                                   <option value={12}>1 Year</option>
-                                  <option value="null">Full Access</option>
+                                  <option value={120}>Full Access</option>
                                 </select>
                               </div>
 
