@@ -61,9 +61,9 @@ export async function GET(request: NextRequest) {
     hs_code = "";
   }
   
-  let sort = request.nextUrl.searchParams.get("sort")?.trim() ?? "date_desc";
+  let sort = request.nextUrl.searchParams.get("sort")?.trim() ?? "date_asc";
   if (!isAdmin && planType === "trial") {
-    sort = "date_desc";
+    sort = "date_asc";
   }
 
   if (!isAdmin && planType === "pro" && product) {
@@ -90,16 +90,16 @@ export async function GET(request: NextRequest) {
   const offset = (page - 1) * limit;
 
   const orderClause =
-    sort === "az" ? "ORDER BY s.exporter ASC, s.id DESC" : 
-    sort === "za" ? "ORDER BY s.exporter DESC, s.id DESC" : 
-    sort === "value_asc" ? "ORDER BY s.value_pkr ASC, s.id DESC" : 
-    sort === "value_desc" ? "ORDER BY s.value_pkr DESC NULLS LAST, s.id DESC" :
-    sort === "date_asc" ? "ORDER BY s.date ASC NULLS LAST, s.id DESC" :
-    "ORDER BY s.date DESC NULLS LAST, s.id DESC";
+    sort === "az" ? "ORDER BY s.exporter ASC, s.id ASC" : 
+    sort === "za" ? "ORDER BY s.exporter DESC, s.id ASC" : 
+    sort === "value_asc" ? "ORDER BY s.value_pkr ASC, s.id ASC" : 
+    sort === "value_desc" ? "ORDER BY s.value_pkr DESC NULLS LAST, s.id ASC" :
+    sort === "date_desc" ? "ORDER BY s.date DESC NULLS LAST, s.id ASC" :
+    "ORDER BY s.date ASC NULLS LAST, s.id ASC";
 
   const countResult = await pool.query(
     `WITH product_bounds AS (
-       SELECT MAX(date) AS latest_record_date
+       SELECT MIN(date) AS earliest_record_date
        FROM export_shipments
        WHERE exporter IS NOT NULL
          AND ($1 = '' OR exporter ILIKE '%' || $1 || '%')
@@ -116,7 +116,7 @@ export async function GET(request: NextRequest) {
        AND ($3 = '' OR s.origin = $3)
        AND ($4 = '' OR (REPLACE(to_char(s.pct, 'FM0000.0000'), '.', '') ILIKE '%' || $4 || '%' OR s.description ILIKE '%' || $4 || '%'))
        AND ($5::text[] IS NULL OR (s.description ~* ANY($6::text[]) OR UPPER(s.description) ILIKE ANY($5::text[])))
-       AND ($7::int IS NULL OR (pb.latest_record_date IS NOT NULL AND s.date >= pb.latest_record_date - ($7 || ' month')::INTERVAL AND s.date <= pb.latest_record_date))`,
+       AND ($7::int IS NULL OR (pb.earliest_record_date IS NOT NULL AND s.date >= pb.earliest_record_date AND s.date < pb.earliest_record_date + ($7 || ' month')::INTERVAL))`,
     [company, product, destination_country, hs_code, proKeywordSearch, proRegexSearch, dataAccessMonths]
   );
   
@@ -159,7 +159,7 @@ export async function GET(request: NextRequest) {
   if (actualLimit > 0) {
     const { rows: dataRows } = await pool.query(
       `WITH product_bounds AS (
-         SELECT MAX(date) AS latest_record_date
+         SELECT MIN(date) AS earliest_record_date
          FROM export_shipments
          WHERE exporter IS NOT NULL
            AND ($1 = '' OR exporter ILIKE '%' || $1 || '%')
@@ -191,7 +191,7 @@ export async function GET(request: NextRequest) {
          AND ($3 = '' OR s.origin = $3)
          AND ($4 = '' OR (REPLACE(to_char(s.pct, 'FM0000.0000'), '.', '') ILIKE '%' || $4 || '%' OR s.description ILIKE '%' || $4 || '%'))
          AND ($5::text[] IS NULL OR (s.description ~* ANY($6::text[]) OR UPPER(s.description) ILIKE ANY($5::text[])))
-         AND ($9::int IS NULL OR (pb.latest_record_date IS NOT NULL AND s.date >= pb.latest_record_date - ($9 || ' month')::INTERVAL AND s.date <= pb.latest_record_date))
+         AND ($9::int IS NULL OR (pb.earliest_record_date IS NOT NULL AND s.date >= pb.earliest_record_date AND s.date < pb.earliest_record_date + ($9 || ' month')::INTERVAL))
        ${orderClause}
        LIMIT $7 OFFSET $8`,
       [company, product, destination_country, hs_code, proKeywordSearch, proRegexSearch, actualLimit, offset, dataAccessMonths]

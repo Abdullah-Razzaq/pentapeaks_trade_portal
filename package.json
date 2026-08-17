@@ -19,6 +19,7 @@
     "jose": "^6.2.7",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
+    "lucide-react": "^1.31.0",
     "next": "16.2.12",
     "pdfkit": "^0.19.1",
     "pdfkit-table": "^0.2.11",

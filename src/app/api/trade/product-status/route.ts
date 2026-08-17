@@ -14,17 +14,22 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Please select a valid product category." }, { status: 400 });
   }
 
+  let dataAccessMonths: number | null = 1;
   let planType = "trial";
   const isAdmin = session.role === "admin";
   let proProducts: string[] = [];
-  if (!isAdmin) {
+
+  if (isAdmin) {
+    dataAccessMonths = null;
+  } else {
     const { rows: userRows } = await pool.query(
-      `SELECT plan_type, pro_products FROM users WHERE id = $1`,
+      `SELECT plan_type, pro_products, data_access_months FROM users WHERE id = $1`,
       [session.userId]
     );
     if (userRows.length > 0) {
       planType = userRows[0].plan_type;
       proProducts = userRows[0].pro_products || [];
+      dataAccessMonths = userRows[0].data_access_months ?? 1;
     }
   }
 
@@ -42,9 +47,24 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  const cteStr = `
+    WITH product_start AS (
+      SELECT MIN(date) AS earliest_record_date
+      FROM export_shipments
+      WHERE (description ILIKE '%' || $1 || '%' OR REPLACE(to_char(pct, 'FM0000.0000'), '.', '') ILIKE '%' || $1 || '%')
+    ),
+    scoped_records AS (
+      SELECT s.*
+      FROM export_shipments s, product_start ps
+      WHERE (s.description ILIKE '%' || $1 || '%' OR REPLACE(to_char(s.pct, 'FM0000.0000'), '.', '') ILIKE '%' || $1 || '%')
+        AND ($2::int IS NULL OR (ps.earliest_record_date IS NOT NULL AND s.date >= ps.earliest_record_date AND s.date < ps.earliest_record_date + ($2 || ' month')::INTERVAL))
+    )
+  `;
+
   const [summary, topBuyers, topSuppliers, topCountries] = await Promise.all([
     pool.query(
-      `SELECT
+      `${cteStr}
+       SELECT
          COUNT(*)::int AS shipments,
          COUNT(DISTINCT importer)::int AS buyers,
          COUNT(DISTINCT exporter)::int AS suppliers,
@@ -52,36 +72,38 @@ export async function GET(request: NextRequest) {
          COALESCE(SUM(value_pkr), 0)::float8 AS total_value_pkr,
          MIN(date) AS first_shipment,
          MAX(date) AS last_shipment
-       FROM export_shipments
-       WHERE (description ILIKE '%' || $1 || '%' OR REPLACE(to_char(pct, 'FM0000.0000'), '.', '') ILIKE '%' || $1 || '%')`,
-      [hsCode]
+       FROM scoped_records`,
+      [hsCode, dataAccessMonths]
     ),
     pool.query(
-      `SELECT importer AS company, COUNT(*)::int AS shipments, COALESCE(SUM(value_pkr), 0)::float8 AS total_value_pkr
-       FROM export_shipments
-       WHERE importer IS NOT NULL AND (description ILIKE '%' || $1 || '%' OR REPLACE(to_char(pct, 'FM0000.0000'), '.', '') ILIKE '%' || $1 || '%')
+      `${cteStr}
+       SELECT importer AS company, COUNT(*)::int AS shipments, COALESCE(SUM(value_pkr), 0)::float8 AS total_value_pkr
+       FROM scoped_records
+       WHERE importer IS NOT NULL
        GROUP BY importer
        ORDER BY total_value_pkr DESC
        LIMIT 5`,
-      [hsCode]
+      [hsCode, dataAccessMonths]
     ),
     pool.query(
-      `SELECT exporter AS company, COUNT(*)::int AS shipments, COALESCE(SUM(value_pkr), 0)::float8 AS total_value_pkr
-       FROM export_shipments
-       WHERE exporter IS NOT NULL AND (description ILIKE '%' || $1 || '%' OR REPLACE(to_char(pct, 'FM0000.0000'), '.', '') ILIKE '%' || $1 || '%')
+      `${cteStr}
+       SELECT exporter AS company, COUNT(*)::int AS shipments, COALESCE(SUM(value_pkr), 0)::float8 AS total_value_pkr
+       FROM scoped_records
+       WHERE exporter IS NOT NULL
        GROUP BY exporter
        ORDER BY total_value_pkr DESC
        LIMIT 5`,
-      [hsCode]
+      [hsCode, dataAccessMonths]
     ),
     pool.query(
-      `SELECT origin AS country, COUNT(*)::int AS shipments, COALESCE(SUM(value_pkr), 0)::float8 AS total_value_pkr
-       FROM export_shipments
-       WHERE origin IS NOT NULL AND (description ILIKE '%' || $1 || '%' OR REPLACE(to_char(pct, 'FM0000.0000'), '.', '') ILIKE '%' || $1 || '%')
+      `${cteStr}
+       SELECT origin AS country, COUNT(*)::int AS shipments, COALESCE(SUM(value_pkr), 0)::float8 AS total_value_pkr
+       FROM scoped_records
+       WHERE origin IS NOT NULL
        GROUP BY origin
        ORDER BY total_value_pkr DESC
        LIMIT 5`,
-      [hsCode]
+      [hsCode, dataAccessMonths]
     ),
   ]);
 

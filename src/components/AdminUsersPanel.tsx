@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { CreditCard, Plus, RefreshCw, DollarSign, Lock, Unlock, Trash2, MoreVertical } from "lucide-react";
 
 type Role = "admin" | "user";
 
@@ -73,6 +74,21 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
   const [loadingPayments, setLoadingPayments] = useState(false);
   const [newPaymentAmount, setNewPaymentAmount] = useState("");
   const [addingPayment, setAddingPayment] = useState(false);
+
+  /* ── Actions Dropdown state ── */
+  const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
+
+  useEffect(() => {
+    const handleGlobalClick = (e: MouseEvent) => {
+      if (!(e.target as Element).closest('.user-actions-dropdown')) {
+        setOpenDropdownId(null);
+      }
+    };
+    if (openDropdownId !== null) {
+      document.addEventListener('click', handleGlobalClick);
+      return () => document.removeEventListener('click', handleGlobalClick);
+    }
+  }, [openDropdownId]);
 
   async function loadUserPayments(userId: number) {
     setLoadingPayments(true);
@@ -405,18 +421,18 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
           <table className="ledger-table ledger-table-scroll w-full text-left text-sm" style={{ borderCollapse: "separate", borderSpacing: 0 }}>
             <thead className="bg-gray-100/60 text-xs font-semibold uppercase tracking-wide text-gray-600">
               <tr>
-                <th className="px-4 py-3 whitespace-nowrap sticky left-0 z-20 bg-gray-100 shadow-[1px_0_0_#e5e7eb] border-b border-gray-200">User</th>
-                <th className="px-4 py-3 whitespace-nowrap border-b border-gray-200">Role</th>
+                <th className="px-4 py-3 whitespace-nowrap sticky left-0 z-20 bg-gray-100 shadow-[1px_0_0_#e5e7eb] border-b border-gray-200 w-48">User</th>
+                <th className="px-4 py-3 whitespace-nowrap border-b border-gray-200 w-24">Role</th>
                 <th className="px-4 py-3 whitespace-nowrap border-b border-gray-200">Business Role</th>
                 <th className="px-4 py-3 whitespace-nowrap border-b border-gray-200">Batch</th>
-                <th className="px-4 py-3 whitespace-nowrap border-b border-gray-200">Plan</th>
-                <th className="px-4 py-3 whitespace-nowrap border-b border-gray-200">Status</th>
+                <th className="px-4 py-3 whitespace-nowrap border-b border-gray-200 w-24">Plan</th>
+                <th className="px-4 py-3 whitespace-nowrap border-b border-gray-200 w-24">Status</th>
                 <th className="px-4 py-3 whitespace-nowrap border-b border-gray-200">Joined</th>
                 <th className="px-4 py-3 whitespace-nowrap border-b border-gray-200">Start Date</th>
-                <th className="px-4 py-3 whitespace-nowrap border-b border-gray-200">End Date</th>
+                <th className="px-4 py-3 whitespace-nowrap border-b border-gray-200 w-32">End Date</th>
                 <th className="px-4 py-3 whitespace-nowrap border-b border-gray-200">Days Left</th>
                 <th className="px-4 py-3 whitespace-nowrap border-b border-gray-200">Total Paid</th>
-                <th className="px-4 py-3 text-right whitespace-nowrap border-b border-gray-200">Action</th>
+                <th className="px-4 py-3 text-center whitespace-nowrap border-b border-gray-200 w-12">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/50">
@@ -523,103 +539,114 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
                           </span>
                         </div>
                       ) : (
-                        <div className="flex items-center justify-end gap-2">
-                          {user.is_suspended && (
-                            <button
-                              onClick={() => toggleSuspend(user)}
-                              disabled={togglingId === user.id}
-                              title="Unsuspend User"
-                              className="rounded-lg border border-red-300 px-2.5 py-1.5 text-xs font-semibold text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center h-8 whitespace-nowrap"
-                            >
-                              Unsuspend
-                            </button>
+                        <div className="relative flex items-center justify-center user-actions-dropdown">
+                          <button
+                            onClick={() => setOpenDropdownId(openDropdownId === user.id ? null : user.id)}
+                            className="p-1.5 rounded-md hover:bg-gray-100 transition text-gray-500"
+                          >
+                            <MoreVertical className="w-4 h-4" />
+                          </button>
+                          {openDropdownId === user.id && (
+                            <div className="absolute right-8 top-0 w-56 bg-white border border-gray-100 rounded-lg shadow-lg z-50 py-1 text-xs text-gray-700 text-left">
+                              <button
+                                onClick={() => {
+                                  setPaymentUser(user);
+                                  loadUserPayments(user.id);
+                                  setOpenDropdownId(null);
+                                }}
+                                className="w-full text-left px-3 py-2 flex items-center gap-2.5 hover:bg-gray-50 transition"
+                              >
+                                <CreditCard className="w-3.5 h-3.5 text-gray-500"/>
+                                <span>Payments</span>
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setAssignProductUser(user);
+                                  setOpenDropdownId(null);
+                                }}
+                                disabled={user.id === currentUserId}
+                                className="w-full text-left px-3 py-2 flex items-center gap-2.5 hover:bg-gray-50 transition disabled:opacity-50"
+                              >
+                                <Plus className="w-3.5 h-3.5 text-gray-500"/>
+                                <span>Add Product</span>
+                              </button>
+                              <button
+                                onClick={() => {
+                                  renew30Days(user);
+                                  setOpenDropdownId(null);
+                                }}
+                                disabled={togglingId === user.id || user.id === currentUserId}
+                                className="w-full text-left px-3 py-2 flex items-center gap-2.5 hover:bg-gray-50 transition disabled:opacity-50"
+                              >
+                                <RefreshCw className="w-3.5 h-3.5 text-gray-500"/>
+                                <span>Renew</span>
+                              </button>
+                              
+                              <div className="px-3 py-2 border-b border-t border-gray-100 mt-1 mb-1">
+                                <label className="block text-[10px] uppercase font-bold text-gray-400 mb-1 tracking-wider">Data Access</label>
+                                <select
+                                  className="w-full rounded border border-gray-200 text-xs px-2 py-1 h-8 bg-white text-gray-700 outline-none focus:ring-2 focus:ring-amber-500/20"
+                                  value={user.data_access_months === null ? "null" : user.data_access_months}
+                                  onChange={(e) => {
+                                    const val = e.target.value === "null" ? null : parseInt(e.target.value, 10);
+                                    handleUpdateDataAccess(user, val);
+                                  }}
+                                  disabled={togglingId === user.id}
+                                >
+                                  <option value={1}>1 Month (Default)</option>
+                                  <option value={2}>2 Months</option>
+                                  <option value={3}>3 Months</option>
+                                  <option value={6}>6 Months</option>
+                                  <option value={12}>1 Year</option>
+                                  <option value="null">Full Access</option>
+                                </select>
+                              </div>
+
+                              {user.plan_type !== "pro" && (
+                                <button
+                                  onClick={() => {
+                                    togglePlan(user, "pro");
+                                    setOpenDropdownId(null);
+                                  }}
+                                  disabled={togglingId === user.id || user.id === currentUserId}
+                                  className="w-full text-left px-3 py-2 flex items-center gap-2.5 hover:bg-gray-50 transition disabled:opacity-50"
+                                >
+                                  <DollarSign className="w-3.5 h-3.5 text-gray-500"/>
+                                  <span>Pro</span>
+                                </button>
+                              )}
+
+                              <button
+                                onClick={() => {
+                                  if (user.is_suspended) {
+                                    toggleSuspend(user);
+                                  } else {
+                                    toggleActive(user);
+                                  }
+                                  setOpenDropdownId(null);
+                                }}
+                                disabled={togglingId === user.id || user.id === currentUserId}
+                                className="w-full text-left px-3 py-2 flex items-center gap-2.5 hover:bg-gray-50 transition disabled:opacity-50"
+                              >
+                                {user.is_suspended ? <Lock className="w-3.5 h-3.5 text-gray-500" /> : user.is_active ? <Lock className="w-3.5 h-3.5 text-gray-500"/> : <Unlock className="w-3.5 h-3.5 text-gray-500"/>}
+                                <span>{user.is_suspended ? "Unsuspend User" : user.is_active ? "Lock User" : "Unlock User"}</span>
+                              </button>
+
+                              <div className="border-t border-gray-100 mt-1 pt-1">
+                                <button
+                                  onClick={() => {
+                                    setDeleteConfirmUser(user);
+                                    setOpenDropdownId(null);
+                                  }}
+                                  disabled={user.id === currentUserId || deletingId === user.id}
+                                  className="w-full text-left px-3 py-2 flex items-center gap-2.5 hover:bg-red-50 transition disabled:opacity-50 text-red-600"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5 text-red-500"/>
+                                  <span>Delete User</span>
+                                </button>
+                              </div>
+                            </div>
                           )}
-                          {user.plan_type !== "pro" && (
-                            <button
-                              onClick={() => togglePlan(user, "pro")}
-                              disabled={togglingId === user.id || user.id === currentUserId}
-                              title={user.id === currentUserId ? "You cannot change your own plan." : "Switch to Pro"}
-                              className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-semibold text-gray-600 transition hover:border-purple-500/50 hover:bg-purple-500/10 hover:text-purple-400 disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center h-8 whitespace-nowrap"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mr-1"><path d="M12 2v20"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-                              Pro
-                            </button>
-                          )}
-                          <button
-                            onClick={() => toggleActive(user)}
-                            disabled={togglingId === user.id || user.id === currentUserId}
-                            title={user.id === currentUserId ? "You cannot change your own status." : (user.is_active ? "Deactivate" : "Activate")}
-                            className={`rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-semibold text-gray-600 transition disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center h-8 whitespace-nowrap ${user.is_active
-                                ? "hover:border-rose-500/50 hover:bg-rose-500/10 hover:text-rose-400"
-                                : "hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:text-emerald-400"
-                              }`}
-                          >
-                            {togglingId === user.id ? (
-                               <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                            ) : user.is_active ? (
-                              <><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mr-1"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg> Lock</>
-                            ) : (
-                              <><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mr-1"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg> Unlock</>
-                            )}
-                          </button>
-                          <button
-                            onClick={() => renew30Days(user)}
-                            disabled={togglingId === user.id || user.id === currentUserId}
-                            title={user.id === currentUserId ? "You cannot change your own status." : "Renew 30 Days"}
-                            className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 border border-gray-300 text-gray-600 hover:border-blue-500/50 hover:bg-blue-500/10 hover:text-blue-400 whitespace-nowrap flex items-center justify-center h-8`}
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mr-1"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
-                            Renew
-                          </button>
-                          <button
-                            onClick={() => setAssignProductUser(user)}
-                            disabled={user.id === currentUserId}
-                            title="Assign a product"
-                            className="rounded-lg px-2.5 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 border border-gray-300 text-gray-600 hover:border-purple-500/50 hover:bg-purple-500/10 hover:text-purple-400 whitespace-nowrap flex items-center justify-center h-8"
-                          >
-                            + Add Product
-                          </button>
-                          <button
-                            onClick={() => {
-                              setPaymentUser(user);
-                              loadUserPayments(user.id);
-                            }}
-                            title="Payments History"
-                            className="rounded-lg px-2.5 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 border border-gray-300 text-gray-600 hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:text-emerald-500 whitespace-nowrap flex items-center justify-center h-8"
-                          >
-                            Payments
-                          </button>
-                          <button
-                            onClick={() => setDeleteConfirmUser(user)}
-                            disabled={user.id === currentUserId || deletingId === user.id}
-                            title={user.id === currentUserId ? "You cannot delete your own account." : "Delete user permanently"}
-                            className="rounded-lg border border-gray-300 text-gray-500 transition hover:border-rose-500/50 hover:bg-rose-500/10 hover:text-rose-400 disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center w-8 h-8 shrink-0"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
-                              <path d="M3 6h18" />
-                              <path d="M19 6l-.867 12.142A2 2 0 0 1 16.138 20H7.862a2 2 0 0 1-1.995-1.858L5 6" />
-                              <path d="M10 11v5" />
-                              <path d="M14 11v5" />
-                            </svg>
-                          </button>
-                          
-                          <select
-                            className="ml-2 rounded border border-gray-300 text-xs px-2 py-1 h-8 bg-gray-50 text-gray-700 outline-none focus:ring-2 focus:ring-amber-500/20"
-                            value={user.data_access_months === null ? "null" : user.data_access_months}
-                            onChange={(e) => {
-                              const val = e.target.value === "null" ? null : parseInt(e.target.value, 10);
-                              handleUpdateDataAccess(user, val);
-                            }}
-                            disabled={togglingId === user.id}
-                            title="Historical Data Access"
-                          >
-                            <option value={1}>1 Month (Default)</option>
-                            <option value={2}>2 Months</option>
-                            <option value={3}>3 Months</option>
-                            <option value={6}>6 Months</option>
-                            <option value={12}>12 Months</option>
-                            <option value="null">Full Access (Unlimited)</option>
-                          </select>
                         </div>
                       )}
                     </td>
