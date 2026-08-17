@@ -71,6 +71,8 @@ export async function GET(request: NextRequest) {
     )
   `;
 
+  const queryParams = isAdmin ? [hsCode] : [hsCode, dataAccessMonths];
+
   const [summary, topBuyers, topSuppliers, topCountries] = await Promise.all([
     pool.query(
       `${cteStr}
@@ -83,7 +85,7 @@ export async function GET(request: NextRequest) {
          MIN(date) AS first_shipment,
          MAX(date) AS last_shipment
        FROM scoped_records`,
-      [hsCode, dataAccessMonths]
+      queryParams
     ),
     pool.query(
       `${cteStr}
@@ -93,7 +95,7 @@ export async function GET(request: NextRequest) {
        GROUP BY importer
        ORDER BY total_value_pkr DESC
        LIMIT 5`,
-      [hsCode, dataAccessMonths]
+      queryParams
     ),
     pool.query(
       `${cteStr}
@@ -103,7 +105,7 @@ export async function GET(request: NextRequest) {
        GROUP BY exporter
        ORDER BY total_value_pkr DESC
        LIMIT 5`,
-      [hsCode, dataAccessMonths]
+      queryParams
     ),
     pool.query(
       `${cteStr}
@@ -113,7 +115,7 @@ export async function GET(request: NextRequest) {
        GROUP BY origin
        ORDER BY total_value_pkr DESC
        LIMIT 5`,
-      [hsCode, dataAccessMonths]
+      queryParams
     ),
   ]);
 

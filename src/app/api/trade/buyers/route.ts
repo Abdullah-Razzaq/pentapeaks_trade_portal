@@ -269,6 +269,6 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ results, total, page, limit });
   } catch (error) {
     console.error("Trade API error:", error);
-    return NextResponse.json({ error: "Failed to fetch trade data" }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Failed to fetch trade data" }, { status: 500 });
   }
 }
