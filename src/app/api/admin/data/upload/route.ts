@@ -20,47 +20,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
     }
 
-    // Ensure the trade_data table and unique constraint exist
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS trade_data (
-        id SERIAL PRIMARY KEY,
-        shipment_date DATE,
-        buyer_name VARCHAR(255) NOT NULL DEFAULT '',
-        supplier_name VARCHAR(255) NOT NULL DEFAULT '',
-        hs_code VARCHAR(50) NOT NULL DEFAULT '',
-        product_description TEXT NOT NULL DEFAULT '',
-        destination_country VARCHAR(100),
-        origin_country VARCHAR(100),
-        quantity NUMERIC,
-        unit VARCHAR(50),
-        value_pkr NUMERIC NOT NULL DEFAULT 0,
-        ntn VARCHAR(100)
-      )
-    `);
-
-    // Ensure NTN column exists (if table was created previously)
-    await pool.query(`
-      DO $$ 
-      BEGIN
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'trade_data' AND column_name = 'ntn') THEN
-          ALTER TABLE trade_data ADD COLUMN ntn VARCHAR(100);
-        END IF;
-      END $$;
-    `);
-
-    // Add unique constraint if not exists
-    await pool.query(`
-      DO $$
-      BEGIN
-        IF NOT EXISTS (
-          SELECT 1 FROM pg_constraint WHERE conname = 'unique_trade_record'
-        ) THEN
-          ALTER TABLE trade_data 
-          ADD CONSTRAINT unique_trade_record 
-          UNIQUE (shipment_date, buyer_name, supplier_name, hs_code, product_description, value_pkr);
-        END IF;
-      END $$;
-    `);
+    // For export_shipments, we will use source_file to make it idempotent
+    if (isFirstChunk) {
+      // Clean up previous uploads of the exact same file to maintain idempotency
+      await pool.query(`DELETE FROM export_shipments WHERE source_file = $1`, [fileName]);
+    }
 
     let logId = incomingLogId;
 
@@ -75,7 +39,7 @@ export async function POST(request: NextRequest) {
 
     let batchProcessed = 0;
     let totalInserted = 0;
-    let totalUpdated = 0;
+    const totalUpdated = 0;
     let totalSkipped = 0;
 
     if (chunk.length > 0) {
@@ -118,13 +82,12 @@ export async function POST(request: NextRequest) {
       });
 
       type ProcessedRow = {
-        shipment_date: string | null;
-        buyer_name: string;
-        supplier_name: string;
-        hs_code: string;
-        product_description: string;
-        destination_country: string | null;
-        origin_country: string | null;
+        date: string | null;
+        importer: string;
+        exporter: string;
+        pct: number;
+        description: string;
+        origin: string | null;
         quantity: number;
         unit: string | null;
         value_pkr: number;
@@ -137,7 +100,7 @@ export async function POST(request: NextRequest) {
          try {
            // Validate and Parse Date
            const rawDate = (row["shipment_date"] || "") as string | number;
-           let shipment_date = null;
+           let date = null;
            
            if (rawDate) {
              let d: Date;
@@ -154,22 +117,24 @@ export async function POST(request: NextRequest) {
              if (isNaN(d.getTime())) {
                throw new Error("Invalid date");
              }
-             shipment_date = d.toISOString().split("T")[0];
+             date = d.toISOString().split("T")[0];
            } else {
              throw new Error("Missing date");
            }
 
-           const hs_code = (row["hs_code"] || "").toString().trim();
-           const product_description = (row["product_description"] || "").toString().trim();
+           const rawHs = (row["hs_code"] || "").toString().replace(/[^0-9.]+/g,"");
+           let pct = parseFloat(rawHs);
+           if (isNaN(pct)) pct = 0;
+           
+           const description = (row["product_description"] || "").toString().trim();
 
-           if (!hs_code && !product_description) {
+           if (!pct && !description) {
              throw new Error("Missing HS Code and Description");
            }
 
-           const buyer_name = (row["buyer_name"] || "").toString().trim();
-           const supplier_name = (row["supplier_name"] || "").toString().trim();
-           const destination_country = (row["destination_country"] || "").toString().trim() || null;
-           const origin_country = (row["origin_country"] || "").toString().trim() || null;
+           const importer = (row["buyer_name"] || "").toString().trim();
+           const exporter = (row["supplier_name"] || "").toString().trim();
+           const origin = (row["origin_country"] || "").toString().trim() || null;
            const ntn = (row["ntn"] || "").toString().trim() || null;
            
            const rawQty = (row["quantity"] || "0").toString().replace(/[^0-9.-]+/g,"");
@@ -183,13 +148,12 @@ export async function POST(request: NextRequest) {
            if (isNaN(value_pkr)) value_pkr = 0;
 
            processedRows.push({
-             shipment_date, 
-             buyer_name, 
-             supplier_name, 
-             hs_code, 
-             product_description, 
-             destination_country, 
-             origin_country, 
+             date, 
+             importer, 
+             exporter, 
+             pct, 
+             description, 
+             origin, 
              quantity, 
              unit, 
              value_pkr,
@@ -200,29 +164,25 @@ export async function POST(request: NextRequest) {
          }
       });
 
-      // Deduplicate within the batch to prevent "ON CONFLICT DO UPDATE command cannot affect row a second time"
-      const uniqueRowsMap = new Map<string, ProcessedRow>();
-      processedRows.forEach(row => {
-         const key = `${row.shipment_date}|${row.buyer_name}|${row.supplier_name}|${row.hs_code}|${row.product_description}|${row.value_pkr}`;
-         uniqueRowsMap.set(key, row);
-      });
-
-      const uniqueRows = Array.from(uniqueRowsMap.values());
       const values: unknown[] = [];
       let queryParams = "";
 
-      uniqueRows.forEach((row, index) => {
-         const offset = index * 11;
-         queryParams += `($${offset+1}::date, $${offset+2}, $${offset+3}, $${offset+4}, $${offset+5}, $${offset+6}, $${offset+7}, $${offset+8}, $${offset+9}, $${offset+10}, $${offset+11}),`;
+      const period = fileName.split('.')[0] || "UNKNOWN";
+      const source_file = fileName;
+
+      processedRows.forEach((row, index) => {
+         const offset = index * 12;
+         queryParams += `($${offset+1}, $${offset+2}, $${offset+3}::date, $${offset+4}, $${offset+5}, $${offset+6}, $${offset+7}, $${offset+8}, $${offset+9}, $${offset+10}, $${offset+11}, $${offset+12}),`;
          
          values.push(
-           row.shipment_date, 
-           row.buyer_name, 
-           row.supplier_name, 
-           row.hs_code, 
-           row.product_description, 
-           row.destination_country, 
-           row.origin_country, 
+           period,
+           source_file,
+           row.date, 
+           row.importer, 
+           row.exporter, 
+           row.pct, 
+           row.description, 
+           row.origin, 
            row.quantity, 
            row.unit, 
            row.value_pkr,
@@ -230,7 +190,7 @@ export async function POST(request: NextRequest) {
          );
       });
 
-      batchProcessed = uniqueRows.length;
+      batchProcessed = processedRows.length;
 
       if (batchProcessed > 0) {
          queryParams = queryParams.slice(0, -1);
@@ -238,28 +198,14 @@ export async function POST(request: NextRequest) {
          try {
            await client.query("BEGIN");
            const res = await client.query(`
-             INSERT INTO trade_data 
-             (shipment_date, buyer_name, supplier_name, hs_code, product_description, destination_country, origin_country, quantity, unit, value_pkr, ntn)
+             INSERT INTO export_shipments 
+             (period, source_file, date, importer, exporter, pct, description, origin, qty, unit, value_pkr, ntn)
              VALUES ${queryParams}
-             ON CONFLICT (shipment_date, buyer_name, supplier_name, hs_code, product_description, value_pkr)
-             DO UPDATE SET
-               destination_country = EXCLUDED.destination_country,
-               origin_country = EXCLUDED.origin_country,
-               quantity = EXCLUDED.quantity,
-               unit = EXCLUDED.unit,
-               ntn = COALESCE(EXCLUDED.ntn, trade_data.ntn)
-             RETURNING (xmax = 0) AS is_insert
            `, values);
            
            await client.query("COMMIT");
            
-           res.rows.forEach(r => {
-             if (r.is_insert) {
-               totalInserted++;
-             } else {
-               totalUpdated++;
-             }
-           });
+           totalInserted += res.rowCount || batchProcessed;
            
          } catch (e) {
            await client.query("ROLLBACK");
