@@ -117,9 +117,22 @@ export async function POST(request: NextRequest) {
         mappedRows.push(normalizedRow);
       });
 
-      const values: unknown[] = [];
-      let queryParams = "";
-      
+      type ProcessedRow = {
+        shipment_date: string | null;
+        buyer_name: string;
+        supplier_name: string;
+        hs_code: string;
+        product_description: string;
+        destination_country: string | null;
+        origin_country: string | null;
+        quantity: number;
+        unit: string | null;
+        value_pkr: number;
+        ntn: string | null;
+      };
+
+      const processedRows: ProcessedRow[] = [];
+
       mappedRows.forEach((row) => {
          try {
            // Validate and Parse Date
@@ -169,10 +182,7 @@ export async function POST(request: NextRequest) {
            let value_pkr = parseFloat(rawVal);
            if (isNaN(value_pkr)) value_pkr = 0;
 
-           const offset = batchProcessed * 11;
-           queryParams += `($${offset+1}::date, $${offset+2}, $${offset+3}, $${offset+4}, $${offset+5}, $${offset+6}, $${offset+7}, $${offset+8}, $${offset+9}, $${offset+10}, $${offset+11}),`;
-           
-           values.push(
+           processedRows.push({
              shipment_date, 
              buyer_name, 
              supplier_name, 
@@ -184,12 +194,43 @@ export async function POST(request: NextRequest) {
              unit, 
              value_pkr,
              ntn
-           );
-           batchProcessed++;
+           });
          } catch {
            totalSkipped++;
          }
       });
+
+      // Deduplicate within the batch to prevent "ON CONFLICT DO UPDATE command cannot affect row a second time"
+      const uniqueRowsMap = new Map<string, ProcessedRow>();
+      processedRows.forEach(row => {
+         const key = `${row.shipment_date}|${row.buyer_name}|${row.supplier_name}|${row.hs_code}|${row.product_description}|${row.value_pkr}`;
+         uniqueRowsMap.set(key, row);
+      });
+
+      const uniqueRows = Array.from(uniqueRowsMap.values());
+      const values: unknown[] = [];
+      let queryParams = "";
+
+      uniqueRows.forEach((row, index) => {
+         const offset = index * 11;
+         queryParams += `($${offset+1}::date, $${offset+2}, $${offset+3}, $${offset+4}, $${offset+5}, $${offset+6}, $${offset+7}, $${offset+8}, $${offset+9}, $${offset+10}, $${offset+11}),`;
+         
+         values.push(
+           row.shipment_date, 
+           row.buyer_name, 
+           row.supplier_name, 
+           row.hs_code, 
+           row.product_description, 
+           row.destination_country, 
+           row.origin_country, 
+           row.quantity, 
+           row.unit, 
+           row.value_pkr,
+           row.ntn
+         );
+      });
+
+      batchProcessed = uniqueRows.length;
 
       if (batchProcessed > 0) {
          queryParams = queryParams.slice(0, -1);
