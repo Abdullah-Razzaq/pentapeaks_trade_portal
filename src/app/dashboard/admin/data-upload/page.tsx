@@ -89,9 +89,17 @@ export default function DataUploadPage() {
         method: "POST",
         body: formData,
       });
-      const data = await res.json();
       
-      if (!res.ok) throw new Error(data.error || "Upload failed");
+      const contentType = res.headers.get("content-type");
+      let data;
+      if (contentType && contentType.includes("application/json")) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        throw new Error(`Server Error (${res.status}): ${text.substring(0, 50)}...`);
+      }
+      
+      if (!res.ok) throw new Error(data?.error || "Upload failed");
       
       setUploadResult({
         success: true,

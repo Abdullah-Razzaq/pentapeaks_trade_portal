@@ -33,18 +33,29 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  if (!isAdmin && planType === "pro") {
-    const keywords = proProducts.map(p => p.toUpperCase());
-    const { rows } = await pool.query(
-      `SELECT 1 FROM export_shipments
-       WHERE UPPER(REGEXP_REPLACE(description, '^[^A-Za-z]*([A-Za-z]+).*$', '\\1')) = ANY($1::text[])
-         AND (description ILIKE '%' || $2 || '%' OR REPLACE(to_char(pct, 'FM0000.0000'), '.', '') ILIKE '%' || $2 || '%')
-       LIMIT 1`,
-      [keywords, hsCode]
-    );
-    if (rows.length === 0) {
+  if (!isAdmin && planType === "pro" && proProducts.length < 2) {
+    return NextResponse.json({ error: "Please select your 2 products on the dashboard first." }, { status: 403 });
+  }
+
+  if (!isAdmin && planType === "pro" && hsCode) {
+    // Similar to buyers/route.ts, if hsCode matches a product string, we check if it's allowed
+    // Note: hsCode comes from the product filter in CompanyExplorer.tsx
+    const isAllowed = proProducts.some((p: string) => p.toLowerCase() === hsCode.toLowerCase());
+    
+    // If it's not exactly in proProducts, we could allow numeric HS codes or let the regex filter handle it
+    // But to match the UI behavior where searching by string product triggers restricted access:
+    if (!isAllowed && isNaN(Number(hsCode))) {
       return NextResponse.json({ error: "Access Restricted: You can search only your selected products for this month." }, { status: 403 });
     }
+  }
+
+  let proKeywordSearch: string[] | null = null;
+  let proRegexSearch: string[] | null = null;
+
+  if (!isAdmin && planType === "pro" && proProducts.length > 0) {
+    const keywords = proProducts.map(p => p.toUpperCase());
+    proKeywordSearch = keywords.map(k => `%${k}%`);
+    proRegexSearch = keywords.map(k => `\\m${k}\\M`);
   }
 
   const cteStr = isAdmin
@@ -60,6 +71,7 @@ export async function GET(request: NextRequest) {
       SELECT DISTINCT DATE_TRUNC('month', date) AS month_start
       FROM export_shipments
       WHERE (description ILIKE '%' || $1 || '%' OR REPLACE(to_char(pct, 'FM0000.0000'), '.', '') ILIKE '%' || $1 || '%')
+        AND ($3::text[] IS NULL OR (description ~* ANY($4::text[]) OR UPPER(description) ILIKE ANY($3::text[])))
       ORDER BY month_start ASC
       LIMIT $2::int
     ),
@@ -68,10 +80,11 @@ export async function GET(request: NextRequest) {
       FROM export_shipments s
       JOIN distinct_months dm ON DATE_TRUNC('month', s.date) = dm.month_start
       WHERE (s.description ILIKE '%' || $1 || '%' OR REPLACE(to_char(s.pct, 'FM0000.0000'), '.', '') ILIKE '%' || $1 || '%')
+        AND ($3::text[] IS NULL OR (s.description ~* ANY($4::text[]) OR UPPER(s.description) ILIKE ANY($3::text[])))
     )
   `;
 
-  const queryParams = isAdmin ? [hsCode] : [hsCode, dataAccessMonths];
+  const queryParams = isAdmin ? [hsCode] : [hsCode, dataAccessMonths, proKeywordSearch, proRegexSearch];
 
   const [summary, topBuyers, topSuppliers, topCountries] = await Promise.all([
     pool.query(
@@ -133,7 +146,7 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     chapter: hsCode,
-    label: `HS Code Filter: ${hsCode}`,
+    label: `Product Status: ${hsCode}`,
     shipments: stats?.shipments ?? 0,
     buyers: stats?.buyers ?? 0,
     suppliers: stats?.suppliers ?? 0,
