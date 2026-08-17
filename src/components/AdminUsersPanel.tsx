@@ -325,13 +325,17 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ data_access_months: months }),
       });
-      if (!res.ok) throw new Error("Failed to update data access limit");
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || data.message || "Failed to update access limit");
+      }
       setUsers((prev) =>
         prev.map((u) => (u.id === userId ? { ...u, data_access_months: months } : u))
       );
     } catch (e) {
-      console.error(e);
-      alert("Failed to update access limit");
+      console.error("Access limit error:", e);
+      const errorMessage = e instanceof Error ? e.message : "Failed to update access limit";
+      alert(errorMessage);
     } finally {
       setTogglingId(null);
     }
@@ -587,10 +591,10 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
                                   DATA ACCESS
                                 </label>
                                 <select 
-                                  value={user.data_access_months || 1} 
+                                  value={user.plan_type === "premium" ? 120 : (user.data_access_months || 1)} 
                                   onChange={(e) => handleUpdateDataAccess(user.id, Number(e.target.value))}
-                                  disabled={togglingId === user.id}
-                                  className="w-full text-xs border border-gray-200 rounded p-1 text-gray-700 bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+                                  disabled={togglingId === user.id || user.plan_type === "premium"}
+                                  className="w-full text-xs border border-gray-200 rounded p-1 text-gray-700 bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 disabled:opacity-60 disabled:bg-gray-100"
                                 >
                                   <option value={1}>1 Month (Default)</option>
                                   <option value={2}>2 Months</option>

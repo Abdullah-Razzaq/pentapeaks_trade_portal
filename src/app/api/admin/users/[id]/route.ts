@@ -8,7 +8,7 @@ const updateUserSchema = z.object({
   planType: z.enum(["trial", "pro", "premium"]).optional(),
   batch: z.string().nullable().optional(),
   isSuspended: z.boolean().optional(),
-  data_access_months: z.number().nullable().optional(),
+  data_access_months: z.union([z.number(), z.string()]).nullable().optional(),
 });
 
 export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -104,13 +104,31 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     query = `UPDATE users SET is_suspended = $1 WHERE id = $2 ${returningClause}`;
     queryParams = [isSuspended, userId];
   } else if (data_access_months !== undefined) {
+    if (data_access_months === null) {
+      return NextResponse.json({ error: "Missing data_access_months parameter" }, { status: 400 });
+    }
+    const months = parseInt(String(data_access_months), 10);
+    if (isNaN(months) || months < 1) {
+      return NextResponse.json({ error: "Invalid months value" }, { status: 400 });
+    }
     query = `UPDATE users SET data_access_months = $1, updated_at = NOW() WHERE id = $2 ${returningClause}`;
-    queryParams = [data_access_months, userId];
+    queryParams = [months, userId];
   } else {
     return NextResponse.json({ error: "No valid fields to update." }, { status: 400 });
   }
 
-  const { rows } = await pool.query(query, queryParams);
+  let rows;
+  try {
+    const result = await pool.query(query, queryParams);
+    rows = result.rows;
+  } catch (error) {
+    console.error("Database query failed:", error);
+    const errorMessage = error instanceof Error ? error.message : "Database update failed";
+    return NextResponse.json(
+      { error: errorMessage },
+      { status: 500 }
+    );
+  }
 
   if (rows.length === 0) {
     return NextResponse.json({ error: "User not found." }, { status: 404 });
