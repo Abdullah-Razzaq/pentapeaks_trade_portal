@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -91,21 +91,35 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
   const isDestinationFilterDisabled = planType === "trial" && userRole !== "admin";
   const isTrial = planType === "trial" && userRole !== "admin";
   const isProductSearchLocked = isTrial;
-  const isProductStatusLocked = isTrial;
   
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [statusSearch, setStatusSearch] = useState("");
-  const [hsCodeFilter, setHsCodeFilter] = useState(searchParams.get("hsCodeFilter") || "");
+  const hsCodeFilter = searchParams.get("hsCodeFilter") || "";
   const [selectedRow, setSelectedRow] = useState<Row | null>(null);
   const [showUpgradeBanner, setShowUpgradeBanner] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [isScrolledToRight, setIsScrolledToRight] = useState(false);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+  const [showMobileTip, setShowMobileTip] = useState(true);
+
+  const handleScroll = () => {
+    if (!tableContainerRef.current) return;
+    const { scrollLeft, scrollWidth, clientWidth } = tableContainerRef.current;
+    // Buffer of 10px to account for decimal scaling
+    setIsScrolledToRight(Math.ceil(scrollLeft + clientWidth) >= scrollWidth - 10);
+  };
+
+  useEffect(() => {
+    handleScroll();
+    window.addEventListener("resize", handleScroll);
+    return () => window.removeEventListener("resize", handleScroll);
+  }, [rows]);
 
   const [status, setStatus] = useState<ProductStatus | null>(null);
-  const [statusLoading, setStatusLoading] = useState(false);
+  // Removed unused statusLoading state
   const [statusError, setStatusError] = useState<string | null>(null);
   const [availableCountries, setAvailableCountries] = useState<string[]>([]);
 
@@ -133,6 +147,10 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
             alert("Access Restricted: You can search only your selected products for this month.");
             return;
           }
+          if (res.status === 401) {
+            router.push("/login");
+            return;
+          }
           
           const errorText = errorData?.error || `Server returned ${res.status}: ${res.statusText}`;
           console.error("API Error Response:", errorText);
@@ -147,7 +165,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
         setLoading(false);
       }
     },
-    [endpoint]
+    [endpoint, router]
   );
 
   useEffect(() => {
@@ -213,39 +231,40 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
       .catch(console.error);
   }, [userRole]);
 
-  async function checkStatus() {
-    const hsPrefix = statusSearch.split(" ")[0] || statusSearch;
-
-    if (!hsPrefix) return;
-    
-    // Set filter for the grid below
-    setHsCodeFilter(hsPrefix);
-    setPage(1); // reset pagination
-    updateUrlParams({ hsCodeFilter: hsPrefix, page: 1 });
-    
-    setStatusLoading(true);
-    setStatusError(null);
-    try {
-      const res = await fetch(`/api/trade/product-status?hs_code=${hsPrefix}`);
-      if (!res.ok) {
-        let errorMsg = `Server returned ${res.status}: ${res.statusText}`;
-        try {
-          const errorData = await res.json();
-          if (errorData.error) errorMsg = errorData.error;
-        } catch {
-          // fallback to default message
-        }
-        throw new Error(errorMsg);
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      const hsPrefix = product.trim().split(" ")[0] || product.trim();
+      if (hsPrefix) {
+        // setStatusLoading(true); // Replaced by general UI loading if needed
+        setStatusError(null);
+        fetch(`/api/trade/product-status?hs_code=${encodeURIComponent(hsPrefix)}`)
+          .then(async (res) => {
+            if (res.status === 401) {
+              router.push("/login");
+              throw new Error("Unauthorized");
+            }
+            if (!res.ok) {
+              let errorMsg = `Server returned ${res.status}: ${res.statusText}`;
+              try {
+                const errorData = await res.json();
+                if (errorData.error) errorMsg = errorData.error;
+              } catch {}
+              throw new Error(errorMsg);
+            }
+            return res.json();
+          })
+          .then((data) => setStatus(data as ProductStatus))
+          .catch((err) => {
+            setStatusError(err instanceof Error ? err.message : "Failed to load product status.");
+            setStatus(null);
+          });
+      } else {
+        setStatus(null);
+        setStatusError(null);
       }
-      const data = await res.json();
-      setStatus(data as ProductStatus);
-    } catch (err) {
-      setStatusError(err instanceof Error ? err.message : "Failed to load product status.");
-      setStatus(null);
-    } finally {
-      setStatusLoading(false);
-    }
-  }
+    }, 500);
+    return () => clearTimeout(handle);
+  }, [product, router]);
 
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
@@ -254,20 +273,6 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
   const [exportEndPage, setExportEndPage] = useState<number | "">(1);
 
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
-  const handleResetToInitialState = () => {
-    // 1. Reset Product Status dropdowns and data
-    setStatusSearch('');
-    setStatus(null);
-  
-    // 2. Clear applied HS code search filter on the page
-    setQuery('');
-    setHsCodeFilter('');
-    setDestinationCountry('');
-  
-    // 3. Re-fetch main table back to initial page load state
-    setPage(1);
-    updateUrlParams({ query: '', product: '', destinationCountry: '', hsCodeFilter: '', page: 1, sort: 'date_asc' });
-  };
 
   const toggleExpand = (id: string | number) => {
     setExpandedRows(prev => ({ ...prev, [id]: !prev[id] }));
@@ -309,6 +314,10 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
         params.set("intent", "download");
         const res = await fetch(`/api/export?${params.toString()}`, { cache: "no-store" });
         if (!res.ok) {
+          if (res.status === 401) {
+            router.push("/login");
+            return;
+          }
           const data = await res.json().catch(() => ({}));
           throw new Error(data.error || `Failed to download ${format.toUpperCase()}`);
         }
@@ -324,6 +333,10 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
         params.set("intent", "download");
         const res = await fetch(`/api/export?${params.toString()}`, { cache: "no-store" });
         if (!res.ok) {
+          if (res.status === 401) {
+            router.push("/login");
+            return;
+          }
           const data = await res.json().catch(() => ({}));
           const errorMsg = data.error || `Failed to download ${format.toUpperCase()}`;
           setDownloadError(errorMsg);
@@ -744,103 +757,65 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
         </div>
       </div>
 
-      <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm no-print">
-        <div className="flex items-center justify-between mb-3 relative">
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-orange-600">
-              Check Product Status
-            </h2>
-            {isProductStatusLocked && (
-              <div className="group relative flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-orange-500"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                <div className="absolute top-full left-0 mt-1 z-50 flex opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                  <div className="bg-gray-900 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap shadow-lg">
-                    Product status filter is available on the Pro Plan.
-                  </div>
-                </div>
+      {statusError && (
+        <div className="mb-6 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600 border border-red-100 shadow-sm no-print">
+          {statusError}
+        </div>
+      )}
+
+      {status && !statusError && (
+        <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm no-print">
+          <h3 className="text-base font-semibold text-gray-900">{status.label}</h3>
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <StatCard label="Shipments" value={status.shipments.toLocaleString()} />
+            <StatCard label="Buyers" value={status.buyers.toLocaleString()} />
+            <StatCard label="Suppliers" value={status.suppliers.toLocaleString()} />
+            <StatCard label="Countries" value={status.countriesServed.toLocaleString()} />
+            <StatCard label="Total Value (PKR)" value={currencyFormatter.format(status.totalValuePkr)} />
+            <StatCard label="First Shipment" value={formatDate(status.firstShipment)} />
+            <StatCard label="Last Shipment" value={formatDate(status.lastShipment)} />
+          </div>
+
+          <div className="mt-5">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+              {topListLabel}
+            </p>
+            {!topList || topList.length === 0 ? (
+              <p className="text-sm text-gray-400">No records found for this category.</p>
+            ) : (
+              <div className="w-full overflow-x-auto rounded-xl border border-slate-200/80 shadow-sm scrollbar-thin">
+                <table className="w-full text-left text-sm">
+                  <tbody className="divide-y divide-gray-100">
+                    {topList.map((entry) => (
+                      <tr key={entry.company}>
+                        <td className="px-3 py-2 font-medium text-gray-900">{entry.company}</td>
+                        <td className="px-3 py-2 text-gray-500">{entry.shipments} shipments</td>
+                        <td className="px-3 py-2 text-right text-gray-600">
+                          {currencyFormatter.format(entry.total_value_pkr)} PKR
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
-          <button
-            type="button"
-            onClick={handleResetToInitialState}
-            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all cursor-pointer"
-            title="Close & Remove Product Status"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
         </div>
-        <div className={`flex flex-col gap-3 sm:flex-row sm:items-end ${isProductStatusLocked ? 'opacity-60 pointer-events-none grayscale-[50%]' : ''}`}>
-          <div className="flex-1 w-full">
-            <label className="mb-1 block text-xs font-medium text-gray-700">Product / HS Code</label>
-            <input
-              type="text"
-              value={statusSearch}
-              onChange={(e) => setStatusSearch(e.target.value)}
-              placeholder="Search by product name or HS code..."
-              disabled={isProductStatusLocked}
-              className="w-full rounded-lg border border-gray-300 bg-gray-50 py-2.5 px-4 text-sm text-gray-900 outline-none transition focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 disabled:opacity-60"
-            />
-          </div>
-          <button
-            onClick={checkStatus}
-            disabled={!statusSearch || statusLoading || isProductStatusLocked}
-            className="rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60 h-[42px]"
-          >
-            {statusLoading ? "Checking..." : "Check Status"}
-          </button>
-        </div>
+      )}
 
-        {statusError && (
-          <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{statusError}</p>
-        )}
-
-        {status && !statusError && (
-          <div className="mt-5">
-            <h3 className="text-base font-semibold text-gray-900">{status.label}</h3>
-            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <StatCard label="Shipments" value={status.shipments.toLocaleString()} />
-              <StatCard label="Buyers" value={status.buyers.toLocaleString()} />
-              <StatCard label="Suppliers" value={status.suppliers.toLocaleString()} />
-              <StatCard label="Countries" value={status.countriesServed.toLocaleString()} />
-              <StatCard label="Total Value (PKR)" value={currencyFormatter.format(status.totalValuePkr)} />
-              <StatCard label="First Shipment" value={formatDate(status.firstShipment)} />
-              <StatCard label="Last Shipment" value={formatDate(status.lastShipment)} />
-            </div>
-
-            <div className="mt-5">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                {topListLabel}
-              </p>
-              {!topList || topList.length === 0 ? (
-                <p className="text-sm text-gray-400">No records found for this category.</p>
-              ) : (
-                <div className="w-full overflow-x-auto rounded-xl border border-slate-200/80 shadow-sm scrollbar-thin">
-                  <table className="w-full text-left text-sm">
-                    <tbody className="divide-y divide-gray-100">
-                      {topList.map((entry) => (
-                        <tr key={entry.company}>
-                          <td className="px-3 py-2 font-medium text-gray-900">{entry.company}</td>
-                          <td className="px-3 py-2 text-gray-500">{entry.shipments} shipments</td>
-                          <td className="px-3 py-2 text-right text-gray-600">
-                            {currencyFormatter.format(entry.total_value_pkr)} PKR
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+      <div className="flex items-center justify-between mb-2 no-print">
+        <span className="text-xs text-gray-400 flex items-center gap-1">💡 Click any row to view complete shipment & customs details</span>
+        <span className="text-xs text-gray-400 hidden sm:block">↔ Scroll horizontally for full shipment metrics (Value, Qty, etc.)</span>
       </div>
 
-      <div className="ledger-table-wrapper w-full overflow-x-auto rounded-xl border border-slate-200/80 shadow-sm scrollbar-thin bg-white print:border-gray-300 print:shadow-none">
-        <div>
-          <table className="ledger-table ledger-table-scroll max-md:!table max-md:!border-separate max-md:!border-spacing-0 text-left text-sm print:text-xs">
+      <div className="relative hidden md:block">
+        <div 
+          ref={tableContainerRef}
+          onScroll={handleScroll}
+          className="ledger-table-wrapper w-full overflow-x-auto rounded-xl border border-slate-200/80 shadow-sm scrollbar-thin scrollbar-thumb-gray-300 hover:scrollbar-thumb-orange-400 scrollbar-track-transparent bg-white print:border-gray-300 print:shadow-none"
+        >
+          <div>
+            <table className="ledger-table ledger-table-scroll max-md:!table max-md:!border-separate max-md:!border-spacing-0 text-left text-sm print:text-xs">
             <thead>
               {mode === "buyer" ? (
                 <tr className="max-md:!table-row">
@@ -867,6 +842,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
                       )}
                     </div>
                   </th>
+                  <th className="px-4 py-3 w-8 text-center print:hidden"></th>
                 </tr>
               ) : (
                 <tr className="max-md:!table-row">
@@ -893,32 +869,33 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
                       )}
                     </div>
                   </th>
+                  <th className="px-4 py-3 w-8 text-center print:hidden"></th>
                 </tr>
               )}
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={mode === "buyer" ? 8 : (userRole === "admin" ? 9 : 8)} className="px-4 py-10 text-center text-gray-400">
+                  <td colSpan={12} className="px-4 py-10 text-center text-gray-400">
                     Loading...
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={mode === "buyer" ? 8 : (userRole === "admin" ? 9 : 8)} className="px-4 py-10 text-center text-red-500 bg-red-50/50">
+                  <td colSpan={12} className="px-4 py-10 text-center text-red-500 bg-red-50/50">
                     {error}
                   </td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={mode === "buyer" ? 8 : (userRole === "admin" ? 9 : 8)} className="px-4 py-12 text-center text-gray-500">
+                  <td colSpan={12} className="px-4 py-12 text-center text-gray-500">
                     No matching shipments found.
                   </td>
                 </tr>
               ) : (
                 rows.map((row) => (
                   mode === "buyer" ? (
-                    <tr key={row.id} onClick={() => setSelectedRow(row)} className="cursor-pointer print:hover:bg-white max-md:!table-row">
+                    <tr key={row.id} onClick={() => setSelectedRow(row)} title="Click to view full shipment details" className="cursor-pointer hover:bg-orange-50/60 transition-colors group print:hover:bg-white max-md:!table-row">
                       <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-xs max-md:!hidden">{formatDate(row.shipment_date)}</td>
                       <td className="px-4 py-3 ledger-entity-secondary hidden max-md:!table-cell max-md:sticky max-md:left-0 max-md:z-10 max-md:bg-white max-md:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">{row.counterparty ?? "—"}</td>
                       <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-xs hidden max-md:!table-cell">{formatDate(row.shipment_date)}</td>
@@ -983,9 +960,12 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
                           </span>
                         )}
                       </td>
+                      <td className="px-4 py-3 text-center print:hidden text-gray-400 group-hover:text-orange-600 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                      </td>
                     </tr>
                   ) : (
-                    <tr key={row.id} onClick={() => setSelectedRow(row)} className="cursor-pointer print:hover:bg-white max-md:!table-row">
+                    <tr key={row.id} onClick={() => setSelectedRow(row)} title="Click to view full shipment details" className="cursor-pointer hover:bg-orange-50/60 transition-colors group print:hover:bg-white max-md:!table-row">
                       <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-xs max-md:!hidden">{formatDate(row.shipment_date)}</td>
                       <td className="px-4 py-3 ledger-entity-primary max-md:sticky max-md:left-0 max-md:z-10 max-md:bg-white max-md:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">{row.company}</td>
                       <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-xs hidden max-md:!table-cell">{formatDate(row.shipment_date)}</td>
@@ -1059,6 +1039,9 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
                           </span>
                         )}
                       </td>
+                      <td className="px-4 py-3 text-center print:hidden text-gray-400 group-hover:text-orange-600 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                      </td>
                     </tr>
                   )
                 ))
@@ -1067,6 +1050,87 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
           </table>
         </div>
       </div>
+      <div className={`pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white/90 to-transparent transition-opacity duration-300 rounded-r-xl print:hidden ${isScrolledToRight ? "opacity-0" : "opacity-100"}`} />
+      </div>
+
+      <div className="block md:hidden">
+        {showMobileTip && (
+          <div className="block sm:hidden bg-amber-50 border border-amber-200 rounded-lg p-2.5 mb-3 flex items-start justify-between gap-2 text-[11px] text-amber-900 shadow-sm animate-fade-in">
+            <div className="flex items-center gap-2">
+              <span className="text-base">💻</span>
+              <p className="leading-tight">
+                <strong className="font-semibold">Best viewed on Desktop:</strong> For full tabular comparisons, enable <em>&quot;Desktop Site&quot;</em> in your mobile browser or use a PC/laptop.
+              </p>
+            </div>
+            <button 
+              onClick={() => setShowMobileTip(false)}
+              className="text-amber-600 hover:text-amber-800 font-bold px-1.5 py-0.5 text-xs rounded hover:bg-amber-100 transition"
+              aria-label="Close tip"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+        {loading ? (
+          <div className="text-center py-10 text-gray-400">Loading...</div>
+        ) : error ? (
+          <div className="text-center py-10 text-red-500 bg-red-50/50 rounded-lg">{error}</div>
+        ) : rows.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">No matching shipments found.</div>
+        ) : (
+          <div className="grid grid-cols-2 gap-2.5 py-2">
+            {rows.map((row) => {
+              const buyerName = mode === "buyer" ? row.company : (row.counterparty || "—");
+              const supplierName = mode === "supplier" ? row.company : (row.counterparty || "—");
+              const displayValue = row.value_pkr === "••••••••" ? "PKR ••••••••" : row.value_pkr ? `PKR ${currencyFormatter.format(row.value_pkr as number)}` : (row.qty === "••••••••" ? "Qty ••••••••" : (row.qty ? `${numberFormatter.format(row.qty as number)} ${row.unit || ""}`.trim() : "—"));
+              
+              return (
+                <div 
+                  key={row.id} 
+                  onClick={() => setSelectedRow(row)}
+                  className="bg-white border border-gray-200 rounded-lg p-2.5 shadow-sm hover:border-orange-400 active:scale-[0.98] transition cursor-pointer flex flex-col justify-between"
+                >
+                  <div className="flex justify-between items-center gap-1 mb-1.5">
+                    <span className="text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded bg-orange-50 text-orange-700 border border-orange-200 truncate max-w-[65%]">
+                      {row.country || 'N/A'}
+                    </span>
+                    <span className="text-[9px] text-gray-500 font-mono bg-gray-100 px-1 py-0.5 rounded">
+                      {row.pct || '—'}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1 my-1">
+                    <div>
+                      <p className="text-[9px] uppercase tracking-wider text-gray-400 font-medium">Buyer</p>
+                      <p className="text-[11px] font-bold text-gray-800 line-clamp-1 leading-tight" title={buyerName}>
+                        {buyerName}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] uppercase tracking-wider text-gray-400 font-medium">Supplier</p>
+                      <p className="text-[10px] text-gray-600 line-clamp-1 leading-tight" title={supplierName}>
+                        {supplierName}
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="text-[10px] text-gray-500 line-clamp-2 leading-tight my-1 italic">
+                    {row.description || 'No description available'}
+                  </p>
+
+                  <div className="mt-2 pt-1.5 border-t border-gray-100 flex justify-between items-center text-[10px]">
+                    <span className="text-gray-400 text-[9px]">{formatDate(row.shipment_date)}</span>
+                    <span className={`font-bold text-[11px] ${row.value_pkr === "••••••••" || row.qty === "••••••••" ? "text-gray-400 blur-[2px]" : "text-orange-600"}`}>
+                      {displayValue}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
 
       {isTrial && product && rows.length > 0 && (
         <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-center shadow-sm">

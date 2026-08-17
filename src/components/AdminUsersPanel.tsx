@@ -17,6 +17,7 @@ type User = {
   batch: string | null;
   business_role: string | null;
   is_suspended: boolean;
+  total_paid?: number;
 };
 
 const getAvatarStyles = (name: string, role: string) => {
@@ -55,6 +56,76 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
   const [assignProductUser, setAssignProductUser] = useState<User | null>(null);
   const [newProductName, setNewProductName] = useState("");
   const [assigningProduct, setAssigningProduct] = useState(false);
+
+  type PaymentRecord = {
+    id: number;
+    amount: string | number;
+    currency: string;
+    payment_method: string;
+    paid_at: string;
+    notes: string;
+  };
+
+  /* ── Payments History state ── */
+  const [paymentUser, setPaymentUser] = useState<User | null>(null);
+  const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [loadingPayments, setLoadingPayments] = useState(false);
+  const [newPaymentAmount, setNewPaymentAmount] = useState("");
+  const [addingPayment, setAddingPayment] = useState(false);
+
+  async function loadUserPayments(userId: number) {
+    setLoadingPayments(true);
+    try {
+      const res = await fetch(`/api/admin/payments?user_id=${userId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setPayments(data.payments || []);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingPayments(false);
+    }
+  }
+
+  const handleAddPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!paymentUser || !newPaymentAmount) return;
+    setAddingPayment(true);
+    try {
+      const res = await fetch("/api/admin/payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: paymentUser.id,
+          amount: parseFloat(newPaymentAmount),
+          currency: "PKR",
+          status: "completed",
+          notes: "Manual log"
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to add payment");
+      setNewPaymentAmount("");
+      await loadUserPayments(paymentUser.id);
+      await loadUsers(); // Refresh main list to update total_paid
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Error logging payment");
+    } finally {
+      setAddingPayment(false);
+    }
+  };
+
+  const handleDeleteUserPayment = async (paymentId: number) => {
+    if (!paymentUser || !confirm("Are you sure you want to delete this payment record?")) return;
+    try {
+      const res = await fetch(`/api/admin/payments?id=${paymentId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete payment");
+      await loadUserPayments(paymentUser.id);
+      await loadUsers(); // Refresh main list to update total_paid
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Error deleting payment");
+    }
+  };
 
   async function loadUsers(isInitialLoad = false) {
     if (!isInitialLoad) {
@@ -323,25 +394,26 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
                 <th className="px-4 py-3 whitespace-nowrap border-b border-gray-200">Start Date</th>
                 <th className="px-4 py-3 whitespace-nowrap border-b border-gray-200">End Date</th>
                 <th className="px-4 py-3 whitespace-nowrap border-b border-gray-200">Days Left</th>
+                <th className="px-4 py-3 whitespace-nowrap border-b border-gray-200">Total Paid</th>
                 <th className="px-4 py-3 text-right whitespace-nowrap border-b border-gray-200">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/50">
               {loading ? (
                 <tr>
-                  <td colSpan={11} className="px-4 py-10 text-center text-gray-500">
+                  <td colSpan={12} className="px-4 py-10 text-center text-gray-500">
                     Loading...
                   </td>
                 </tr>
               ) : listError ? (
                 <tr>
-                  <td colSpan={11} className="px-4 py-10 text-center text-rose-500">
+                  <td colSpan={12} className="px-4 py-10 text-center text-rose-500">
                     {listError}
                   </td>
                 </tr>
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="px-4 py-10 text-center text-gray-500">
+                  <td colSpan={12} className="px-4 py-10 text-center text-gray-500">
                     No users found matching your search.
                   </td>
                 </tr>
@@ -419,6 +491,9 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
                         return daysLeft > 0 ? `${daysLeft} days` : <span className="text-rose-500">Expired</span>;
                       })()}
                     </td>
+                    <td className="px-4 py-3 text-gray-600 font-medium whitespace-nowrap">
+                      {user.total_paid ? `PKR ${Number(user.total_paid).toLocaleString()}` : "—"}
+                    </td>
                     <td className="px-4 py-3 text-right">
                       {user.role === "admin" ? (
                         <div className="flex items-center justify-end">
@@ -482,6 +557,16 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
                             className="rounded-lg px-2.5 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 border border-gray-300 text-gray-600 hover:border-purple-500/50 hover:bg-purple-500/10 hover:text-purple-400 whitespace-nowrap flex items-center justify-center h-8"
                           >
                             + Add Product
+                          </button>
+                          <button
+                            onClick={() => {
+                              setPaymentUser(user);
+                              loadUserPayments(user.id);
+                            }}
+                            title="Payments History"
+                            className="rounded-lg px-2.5 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 border border-gray-300 text-gray-600 hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:text-emerald-500 whitespace-nowrap flex items-center justify-center h-8"
+                          >
+                            Payments
                           </button>
                           <button
                             onClick={() => setDeleteConfirmUser(user)}
@@ -599,6 +684,88 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Payments History Modal ── */}
+      {paymentUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-50/80 backdrop-blur-sm px-4 transition-all">
+          <div className="w-full max-w-2xl max-h-[85vh] flex flex-col rounded-2xl bg-white shadow-2xl border border-gray-200 overflow-hidden">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between shrink-0">
+              <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                Payments: {paymentUser.name}
+              </h2>
+              <button
+                onClick={() => setPaymentUser(null)}
+                className="text-gray-500 transition hover:text-gray-700 rounded-full hover:bg-gray-100 p-1"
+                aria-label="Close"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1">
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Log Manual Payment</h3>
+                <form onSubmit={handleAddPayment} className="flex gap-3">
+                  <input
+                    type="number"
+                    placeholder="Amount (PKR)"
+                    required
+                    value={newPaymentAmount}
+                    onChange={(e) => setNewPaymentAmount(e.target.value)}
+                    className="flex-1 rounded-xl border border-gray-300 bg-gray-50 px-4 py-2 text-sm text-gray-900 outline-none transition focus:border-emerald-500"
+                  />
+                  <button
+                    type="submit"
+                    disabled={addingPayment}
+                    className="rounded-xl bg-emerald-600 px-5 py-2 text-sm font-bold text-white transition hover:bg-emerald-700 shadow-sm disabled:cursor-not-allowed disabled:opacity-60 flex items-center justify-center"
+                  >
+                    {addingPayment ? "Logging..." : "Log Payment"}
+                  </button>
+                </form>
+              </div>
+
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Transaction History</h3>
+              {loadingPayments ? (
+                <p className="text-sm text-gray-500">Loading payments...</p>
+              ) : payments.length === 0 ? (
+                <p className="text-sm text-gray-500 border border-dashed border-gray-300 rounded-lg p-4 text-center">No transactions found.</p>
+              ) : (
+                <div className="rounded-xl border border-gray-200 overflow-hidden">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-gray-50 border-b border-gray-200 text-xs font-semibold uppercase tracking-wide text-gray-600">
+                      <tr>
+                        <th className="px-4 py-3">Date</th>
+                        <th className="px-4 py-3 text-right">Amount</th>
+                        <th className="px-4 py-3">Method</th>
+                        <th className="px-4 py-3">Notes</th>
+                        <th className="px-4 py-3 text-center">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {payments.map(p => (
+                        <tr key={p.id} className="hover:bg-gray-50 transition">
+                          <td className="px-4 py-3 text-gray-600">
+                            {new Date(p.paid_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                          </td>
+                          <td className="px-4 py-3 text-right font-medium text-gray-900">
+                            {p.currency} {Number(p.amount).toLocaleString()}
+                          </td>
+                          <td className="px-4 py-3 text-gray-500 capitalize">{p.payment_method.replace('_', ' ')}</td>
+                          <td className="px-4 py-3 text-gray-500 text-xs">{p.notes || "—"}</td>
+                          <td className="px-4 py-3 text-center">
+                            <button onClick={() => handleDeleteUserPayment(p.id)} className="text-rose-500 hover:text-rose-700 transition" title="Delete Payment">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

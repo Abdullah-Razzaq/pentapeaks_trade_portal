@@ -5,6 +5,8 @@ import { getSession } from "@/lib/session";
 import { pool } from "@/lib/db";
 import ProProductSelectionModal from "@/components/ProProductSelectionModal";
 import AdminSubscriptionAlerts from "@/components/AdminSubscriptionAlerts";
+import RecentDataActivity from "@/components/RecentDataActivity";
+import SystemStatusWidget from "@/components/SystemStatusWidget";
 
 export default async function DashboardPage() {
   const session = await getSession();
@@ -103,32 +105,7 @@ export default async function DashboardPage() {
              </div>
 
              {/* Recent Data Activity */}
-             <div>
-               <h2 className="text-lg font-bold text-[#17233D] mb-4">Recent Data Activity</h2>
-               <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-sm">
-                 <table className="min-w-full text-left text-sm whitespace-nowrap">
-                   <thead className="bg-[#F7F9FC] border-b border-[#E5E7EB]">
-                     <tr>
-                       <th className="px-6 py-3 font-semibold text-[#64748B]">Dataset</th>
-                       <th className="px-6 py-3 font-semibold text-[#64748B]">Status</th>
-                       <th className="px-6 py-3 font-semibold text-[#64748B]">Time</th>
-                     </tr>
-                   </thead>
-                   <tbody className="divide-y divide-[#E5E7EB]">
-                     <tr>
-                       <td className="px-6 py-4 text-[#17233D] font-medium">Export Shipments (Auto-sync)</td>
-                       <td className="px-6 py-4"><span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-md text-xs font-bold">Completed</span></td>
-                       <td className="px-6 py-4 text-[#64748B]">Today</td>
-                     </tr>
-                     <tr>
-                       <td className="px-6 py-4 text-[#17233D] font-medium">System Backup</td>
-                       <td className="px-6 py-4"><span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-md text-xs font-bold">Completed</span></td>
-                       <td className="px-6 py-4 text-[#64748B]">Yesterday</td>
-                     </tr>
-                   </tbody>
-                 </table>
-               </div>
-             </div>
+             <RecentDataActivity />
 
            </div>
 
@@ -155,23 +132,7 @@ export default async function DashboardPage() {
              </div>
 
              {/* System Status */}
-             <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 shadow-sm">
-               <h2 className="text-lg font-bold text-[#17233D] mb-4">System Status</h2>
-               <div className="space-y-4">
-                 <div className="flex items-center justify-between">
-                   <span className="text-[#64748B] font-medium text-sm flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-emerald-500"></span> Database</span>
-                   <span className="text-emerald-600 font-bold text-[10px] uppercase tracking-wider bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-md">Operational</span>
-                 </div>
-                 <div className="flex items-center justify-between">
-                   <span className="text-[#64748B] font-medium text-sm flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-emerald-500"></span> API Services</span>
-                   <span className="text-emerald-600 font-bold text-[10px] uppercase tracking-wider bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-md">Operational</span>
-                 </div>
-                 <div className="flex items-center justify-between">
-                   <span className="text-[#64748B] font-medium text-sm flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-emerald-500"></span> Data Pipeline</span>
-                   <span className="text-emerald-600 font-bold text-[10px] uppercase tracking-wider bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-md">Operational</span>
-                 </div>
-               </div>
-             </div>
+             <SystemStatusWidget />
 
            </div>
          </div>

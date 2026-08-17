@@ -18,9 +18,12 @@ export async function GET() {
   }
 
   const { rows } = await pool.query(
-    `SELECT id, name, email, role, is_active, plan_type, subscription_start_date, subscription_expires_at, created_at, batch, business_role
-     FROM users
-     ORDER BY created_at DESC`
+    `SELECT u.id, u.name, u.email, u.role, u.is_active, u.plan_type, u.subscription_start_date, u.subscription_expires_at, u.created_at, u.batch, u.business_role,
+            COALESCE(SUM(p.amount), 0) as total_paid
+     FROM users u
+     LEFT JOIN payments p ON u.id = p.user_id AND p.status = 'completed'
+     GROUP BY u.id
+     ORDER BY u.created_at DESC`
   );
 
   return NextResponse.json({ users: rows });

@@ -65,6 +65,14 @@ export async function POST(request: NextRequest) {
     let totalSkipped = 0;
 
     for (const file of files) {
+      const fileSize = file.size < 1024 * 1024 ? `${(file.size / 1024).toFixed(1)} KB` : `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
+      const logRes = await pool.query(
+        `INSERT INTO data_activity_logs (dataset_name, file_size, status) VALUES ($1, $2, 'Processing') RETURNING id`,
+        [file.name, fileSize]
+      );
+      const logId = logRes.rows[0].id;
+      let fileProcessed = 0;
+
       const buffer = await file.arrayBuffer();
       let rawRows: Record<string, unknown>[] = [];
       try {
@@ -74,10 +82,14 @@ export async function POST(request: NextRequest) {
         rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
       } catch (err) {
         console.error("Parse error for file", file.name, err);
+        await pool.query(`UPDATE data_activity_logs SET status = 'Failed' WHERE id = $1`, [logId]);
         return NextResponse.json({ error: `Failed to parse file: ${file.name}` }, { status: 400 });
       }
 
-      if (rawRows.length === 0) continue;
+      if (rawRows.length === 0) {
+        await pool.query(`UPDATE data_activity_logs SET status = 'Completed', records_processed = 0 WHERE id = $1`, [logId]);
+        continue;
+      }
 
       // Extract and Normalize Headers
       const mappedRows: Record<string, unknown>[] = [];
@@ -222,6 +234,7 @@ export async function POST(request: NextRequest) {
              await client.query("COMMIT");
              
              totalProcessed += batchProcessed;
+             fileProcessed += batchProcessed;
              
              res.rows.forEach(r => {
                if (r.is_insert) {
@@ -234,12 +247,14 @@ export async function POST(request: NextRequest) {
            } catch (e) {
              await client.query("ROLLBACK");
              console.error("Batch insert failed:", e);
+             await pool.query(`UPDATE data_activity_logs SET status = 'Failed' WHERE id = $1`, [logId]);
              throw e;
            } finally {
              client.release();
            }
         }
       }
+      await pool.query(`UPDATE data_activity_logs SET status = 'Completed', records_processed = $1 WHERE id = $2`, [fileProcessed, logId]);
     }
 
     return NextResponse.json({ 
