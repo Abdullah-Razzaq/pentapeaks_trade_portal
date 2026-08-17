@@ -6,6 +6,7 @@ export function useUserQuota() {
   const [planType, setPlanType] = useState<string>('trial');
   const [subscriptionExpiresAt, setSubscriptionExpiresAt] = useState<string | null>(null);
   const [resetsAt, setResetsAt] = useState<string | null>(null);
+  const [dataAccessMonths, setDataAccessMonths] = useState<number | null>(1);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const pathname = usePathname();
 
@@ -21,6 +22,11 @@ export function useUserQuota() {
           setSubscriptionExpiresAt(data.user.subscription_expires_at ?? null);
           setResetsAt(data.user.resetsAt ?? null);
           setPlanType(data.user.plan_type ?? 'trial');
+          if (data.user.role === 'admin') {
+            setDataAccessMonths(null);
+          } else {
+            setDataAccessMonths(data.user.data_access_months ?? 1);
+          }
         }
       }
     } catch (err) {
@@ -47,6 +53,7 @@ export function useUserQuota() {
     refreshQuota: fetchQuota,
     subscriptionExpiresAt,
     resetsAt,
+    dataAccessMonths,
     isLoading
   };
 }

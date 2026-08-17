@@ -74,7 +74,7 @@ function StatCard({ label, value }: { label: string; value: string }) {
 }
 
 export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRole?: string }) {
-  const { subscriptionExpiresAt, refreshQuota, planType } = useUserQuota();
+  const { subscriptionExpiresAt, refreshQuota, planType, dataAccessMonths } = useUserQuota();
   
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -802,6 +802,20 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
           </div>
         </div>
       )}
+
+      <div className="mb-4 bg-blue-50 border border-blue-100 rounded-lg p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-sm text-blue-800 no-print shadow-sm">
+        <div className="flex items-center gap-2">
+          <span>📅</span>
+          <p>
+            Showing {dataAccessMonths === null ? "all historical" : `latest ${dataAccessMonths} month${dataAccessMonths === 1 ? "" : "s"} of`} trade records (Sorted by newest first).
+          </p>
+        </div>
+        {dataAccessMonths === 1 && (
+          <a href="mailto:admin@pentapeaks.com" className="text-xs font-semibold text-blue-600 hover:text-blue-800 underline transition whitespace-nowrap">
+            Need deeper historical data? Contact Admin.
+          </a>
+        )}
+      </div>
 
       <div className="flex items-center justify-between mb-2 no-print">
         <span className="text-xs text-gray-400 flex items-center gap-1">💡 Click any row to view complete shipment & customs details</span>

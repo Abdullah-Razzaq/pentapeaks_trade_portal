@@ -23,16 +23,20 @@ export async function GET(request: NextRequest) {
   const isAdmin = session.role === "admin";
   let planType = "trial";
   let proProducts: string[] = [];
+  let dataAccessMonths: number | null = 1;
   
   if (!isAdmin) {
     const { rows: userRows } = await pool.query(
-      `SELECT plan_type, pro_products FROM users WHERE id = $1`,
+      `SELECT plan_type, pro_products, data_access_months FROM users WHERE id = $1`,
       [session.userId]
     );
     if (userRows.length > 0) {
       planType = userRows[0].plan_type;
       proProducts = userRows[0].pro_products || [];
+      dataAccessMonths = userRows[0].data_access_months ?? 1;
     }
+  } else {
+    dataAccessMonths = null;
   }
 
   const securityResponse = await enforceSearchSecurity(session, planType);
@@ -57,9 +61,9 @@ export async function GET(request: NextRequest) {
     hs_code = "";
   }
   
-  let sort = request.nextUrl.searchParams.get("sort")?.trim() ?? "date_asc";
+  let sort = request.nextUrl.searchParams.get("sort")?.trim() ?? "date_desc";
   if (!isAdmin && planType === "trial") {
-    sort = "date_asc";
+    sort = "date_desc";
   }
 
   if (!isAdmin && planType === "pro" && product) {
@@ -86,12 +90,12 @@ export async function GET(request: NextRequest) {
   const offset = (page - 1) * limit;
 
   const orderClause =
-    sort === "az" ? "ORDER BY exporter ASC" : 
-    sort === "za" ? "ORDER BY exporter DESC" : 
-    sort === "value_asc" ? "ORDER BY value_pkr ASC" : 
-    sort === "value_desc" ? "ORDER BY value_pkr DESC NULLS LAST" :
-    sort === "date_desc" ? "ORDER BY date DESC NULLS LAST" :
-    "ORDER BY date ASC NULLS LAST";
+    sort === "az" ? "ORDER BY exporter ASC, id DESC" : 
+    sort === "za" ? "ORDER BY exporter DESC, id DESC" : 
+    sort === "value_asc" ? "ORDER BY value_pkr ASC, id DESC" : 
+    sort === "value_desc" ? "ORDER BY value_pkr DESC NULLS LAST, id DESC" :
+    sort === "date_asc" ? "ORDER BY date ASC NULLS LAST, id DESC" :
+    "ORDER BY date DESC NULLS LAST, id DESC";
 
   const countResult = await pool.query(
     `SELECT COUNT(*)
@@ -101,8 +105,9 @@ export async function GET(request: NextRequest) {
        AND ($2 = '' OR description ILIKE '%' || $2 || '%')
        AND ($3 = '' OR origin = $3)
        AND ($4 = '' OR (REPLACE(to_char(pct, 'FM0000.0000'), '.', '') ILIKE '%' || $4 || '%' OR description ILIKE '%' || $4 || '%'))
-       AND ($5::text[] IS NULL OR (description ~* ANY($6::text[]) OR UPPER(description) ILIKE ANY($5::text[])))`,
-    [company, product, destination_country, hs_code, proKeywordSearch, proRegexSearch]
+       AND ($5::text[] IS NULL OR (description ~* ANY($6::text[]) OR UPPER(description) ILIKE ANY($5::text[])))
+       AND ($7::int IS NULL OR date >= NOW() - ($7 || ' month')::INTERVAL)`,
+    [company, product, destination_country, hs_code, proKeywordSearch, proRegexSearch, dataAccessMonths]
   );
   
   let total = parseInt(countResult.rows[0].count, 10);
@@ -166,9 +171,10 @@ export async function GET(request: NextRequest) {
          AND ($3 = '' OR origin = $3)
          AND ($4 = '' OR (REPLACE(to_char(pct, 'FM0000.0000'), '.', '') ILIKE '%' || $4 || '%' OR description ILIKE '%' || $4 || '%'))
          AND ($5::text[] IS NULL OR (description ~* ANY($6::text[]) OR UPPER(description) ILIKE ANY($5::text[])))
+         AND ($9::int IS NULL OR date >= NOW() - ($9 || ' month')::INTERVAL)
        ${orderClause}
        LIMIT $7 OFFSET $8`,
-      [company, product, destination_country, hs_code, proKeywordSearch, proRegexSearch, actualLimit, offset]
+      [company, product, destination_country, hs_code, proKeywordSearch, proRegexSearch, actualLimit, offset, dataAccessMonths]
     );
     rows = dataRows;
   }

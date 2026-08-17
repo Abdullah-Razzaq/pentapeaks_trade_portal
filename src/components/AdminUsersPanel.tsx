@@ -17,6 +17,7 @@ type User = {
   batch: string | null;
   business_role: string | null;
   is_suspended: boolean;
+  data_access_months: number | null;
   total_paid?: number;
 };
 
@@ -293,10 +294,30 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
       setAssignProductUser(null);
       setNewProductName("");
       await loadUsers();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Error assigning product");
+    } catch {
+      alert("Failed to assign products. Check server logs.");
     } finally {
       setAssigningProduct(false);
+    }
+  };
+
+  const handleUpdateDataAccess = async (user: User, months: number | null) => {
+    setTogglingId(user.id);
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dataAccessMonths: months }),
+      });
+      if (!res.ok) throw new Error("Failed to update data access limit");
+      setUsers((prev) =>
+        prev.map((u) => (u.id === user.id ? { ...u, data_access_months: months } : u))
+      );
+    } catch (e) {
+      console.error(e);
+      alert("Failed to update access limit");
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -581,6 +602,24 @@ export default function AdminUsersPanel({ currentUserId }: { currentUserId: numb
                               <path d="M14 11v5" />
                             </svg>
                           </button>
+                          
+                          <select
+                            className="ml-2 rounded border border-gray-300 text-xs px-2 py-1 h-8 bg-gray-50 text-gray-700 outline-none focus:ring-2 focus:ring-amber-500/20"
+                            value={user.data_access_months === null ? "null" : user.data_access_months}
+                            onChange={(e) => {
+                              const val = e.target.value === "null" ? null : parseInt(e.target.value, 10);
+                              handleUpdateDataAccess(user, val);
+                            }}
+                            disabled={togglingId === user.id}
+                            title="Historical Data Access"
+                          >
+                            <option value={1}>1 Month (Default)</option>
+                            <option value={2}>2 Months</option>
+                            <option value={3}>3 Months</option>
+                            <option value={6}>6 Months</option>
+                            <option value={12}>12 Months</option>
+                            <option value="null">Full Access (Unlimited)</option>
+                          </select>
                         </div>
                       )}
                     </td>

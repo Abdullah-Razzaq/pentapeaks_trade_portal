@@ -12,7 +12,7 @@ export async function GET() {
   }
 
   const { rows } = await pool.query(
-    "SELECT last_activated_at, download_count, downloads_today, last_download_date, subscription_expires_at, plan_type FROM users WHERE id = $1", 
+    "SELECT last_activated_at, download_count, downloads_today, last_download_date, subscription_expires_at, plan_type, data_access_months FROM users WHERE id = $1", 
     [session.userId]
   );
   const userStats = rows[0] || {};
@@ -31,6 +31,7 @@ export async function GET() {
       last_download_date: userStats.last_download_date,
       subscription_expires_at: userStats.subscription_expires_at,
       plan_type: userStats.plan_type || 'trial',
+      data_access_months: userStats.data_access_months ?? 1,
       resetsAt,
     },
   });

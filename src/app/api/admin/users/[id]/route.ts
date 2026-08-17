@@ -8,6 +8,7 @@ const updateUserSchema = z.object({
   planType: z.enum(["trial", "pro", "premium"]).optional(),
   batch: z.string().nullable().optional(),
   isSuspended: z.boolean().optional(),
+  dataAccessMonths: z.number().nullable().optional(),
 });
 
 export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -61,7 +62,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ error: "Invalid input." }, { status: 400 });
   }
 
-  const { isActive, planType, batch, isSuspended } = parsed.data;
+  const { isActive, planType, batch, isSuspended, dataAccessMonths } = parsed.data;
 
   if (userId === session.userId && (isActive !== undefined || planType !== undefined || isSuspended !== undefined)) {
     return NextResponse.json({ error: "You cannot change your own account status or plan." }, { status: 400 });
@@ -77,7 +78,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   
   let query = "";
   let queryParams: (string | number | boolean | null)[] = [];
-  const returningClause = "RETURNING id, name, email, role, is_active, plan_type, is_suspended, subscription_expires_at, created_at, last_activated_at, download_count";
+  const returningClause = "RETURNING id, name, email, role, is_active, plan_type, is_suspended, subscription_expires_at, created_at, last_activated_at, download_count, data_access_months";
 
   if (planType !== undefined) {
     if (planType === "pro" || planType === "premium") {
@@ -97,11 +98,14 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     }
     queryParams = [isActive, userId];
   } else if (batch !== undefined) {
-    query = `UPDATE users SET batch = $1 WHERE id = $2 RETURNING id, name, email, role, is_active, plan_type, is_suspended, batch, subscription_expires_at, created_at, last_activated_at, download_count`;
+    query = `UPDATE users SET batch = $1 WHERE id = $2 RETURNING id, name, email, role, is_active, plan_type, is_suspended, batch, subscription_expires_at, created_at, last_activated_at, download_count, data_access_months`;
     queryParams = [batch, userId];
   } else if (isSuspended !== undefined) {
     query = `UPDATE users SET is_suspended = $1 WHERE id = $2 ${returningClause}`;
     queryParams = [isSuspended, userId];
+  } else if (dataAccessMonths !== undefined) {
+    query = `UPDATE users SET data_access_months = $1 WHERE id = $2 ${returningClause}`;
+    queryParams = [dataAccessMonths, userId];
   } else {
     return NextResponse.json({ error: "No valid fields to update." }, { status: 400 });
   }
