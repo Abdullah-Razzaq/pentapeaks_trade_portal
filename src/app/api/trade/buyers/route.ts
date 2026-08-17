@@ -90,23 +90,33 @@ export async function GET(request: NextRequest) {
   const offset = (page - 1) * limit;
 
   const orderClause =
-    sort === "az" ? "ORDER BY importer ASC, id DESC" : 
-    sort === "za" ? "ORDER BY importer DESC, id DESC" : 
-    sort === "value_asc" ? "ORDER BY value_pkr ASC, id DESC" : 
-    sort === "value_desc" ? "ORDER BY value_pkr DESC NULLS LAST, id DESC" :
-    sort === "date_asc" ? "ORDER BY date ASC NULLS LAST, id DESC" :
-    "ORDER BY date DESC NULLS LAST, id DESC";
+    sort === "az" ? "ORDER BY s.importer ASC, s.id DESC" : 
+    sort === "za" ? "ORDER BY s.importer DESC, s.id DESC" : 
+    sort === "value_asc" ? "ORDER BY s.value_pkr ASC, s.id DESC" : 
+    sort === "value_desc" ? "ORDER BY s.value_pkr DESC NULLS LAST, s.id DESC" :
+    sort === "date_asc" ? "ORDER BY s.date ASC NULLS LAST, s.id DESC" :
+    "ORDER BY s.date DESC NULLS LAST, s.id DESC";
 
   const countResult = await pool.query(
-    `SELECT COUNT(*)
-     FROM export_shipments
-     WHERE importer IS NOT NULL
-       AND ($1 = '' OR importer ILIKE '%' || $1 || '%')
-       AND ($2 = '' OR description ILIKE '%' || $2 || '%')
-       AND ($3 = '' OR origin = $3)
-       AND ($4 = '' OR (REPLACE(to_char(pct, 'FM0000.0000'), '.', '') ILIKE '%' || $4 || '%' OR description ILIKE '%' || $4 || '%'))
-       AND ($5::text[] IS NULL OR (description ~* ANY($6::text[]) OR UPPER(description) ILIKE ANY($5::text[])))
-       AND ($7::int IS NULL OR date >= NOW() - ($7 || ' month')::INTERVAL)`,
+    `WITH product_bounds AS (
+       SELECT MAX(date) AS latest_record_date
+       FROM export_shipments
+       WHERE importer IS NOT NULL
+         AND ($1 = '' OR importer ILIKE '%' || $1 || '%')
+         AND ($2 = '' OR description ILIKE '%' || $2 || '%')
+         AND ($3 = '' OR origin = $3)
+         AND ($4 = '' OR (REPLACE(to_char(pct, 'FM0000.0000'), '.', '') ILIKE '%' || $4 || '%' OR description ILIKE '%' || $4 || '%'))
+         AND ($5::text[] IS NULL OR (description ~* ANY($6::text[]) OR UPPER(description) ILIKE ANY($5::text[])))
+     )
+     SELECT COUNT(*)
+     FROM export_shipments s, product_bounds pb
+     WHERE s.importer IS NOT NULL
+       AND ($1 = '' OR s.importer ILIKE '%' || $1 || '%')
+       AND ($2 = '' OR s.description ILIKE '%' || $2 || '%')
+       AND ($3 = '' OR s.origin = $3)
+       AND ($4 = '' OR (REPLACE(to_char(s.pct, 'FM0000.0000'), '.', '') ILIKE '%' || $4 || '%' OR s.description ILIKE '%' || $4 || '%'))
+       AND ($5::text[] IS NULL OR (s.description ~* ANY($6::text[]) OR UPPER(s.description) ILIKE ANY($5::text[])))
+       AND ($7::int IS NULL OR (pb.latest_record_date IS NOT NULL AND s.date >= pb.latest_record_date - ($7 || ' month')::INTERVAL AND s.date <= pb.latest_record_date))`,
     [company, product, destination_country, hs_code, proKeywordSearch, proRegexSearch, dataAccessMonths]
   );
   
@@ -148,30 +158,40 @@ export async function GET(request: NextRequest) {
   let rows: ExportRow[] = [];
   if (actualLimit > 0) {
     const { rows: dataRows } = await pool.query(
-      `SELECT
-         id,
-         importer AS company,
-         ntn,
-         email,
-         phone,
-         address,
-         website,
-         origin AS country,
-         exporter AS counterparty,
-         pct,
-         qty,
-         unit,
-         description,
-         COALESCE(value_pkr, 0)::float8 AS value_pkr,
-         date AS shipment_date
-       FROM export_shipments
-       WHERE importer IS NOT NULL
-         AND ($1 = '' OR importer ILIKE '%' || $1 || '%')
-         AND ($2 = '' OR description ILIKE '%' || $2 || '%')
-         AND ($3 = '' OR origin = $3)
-         AND ($4 = '' OR (REPLACE(to_char(pct, 'FM0000.0000'), '.', '') ILIKE '%' || $4 || '%' OR description ILIKE '%' || $4 || '%'))
-         AND ($5::text[] IS NULL OR (description ~* ANY($6::text[]) OR UPPER(description) ILIKE ANY($5::text[])))
-         AND ($9::int IS NULL OR date >= NOW() - ($9 || ' month')::INTERVAL)
+      `WITH product_bounds AS (
+         SELECT MAX(date) AS latest_record_date
+         FROM export_shipments
+         WHERE importer IS NOT NULL
+           AND ($1 = '' OR importer ILIKE '%' || $1 || '%')
+           AND ($2 = '' OR description ILIKE '%' || $2 || '%')
+           AND ($3 = '' OR origin = $3)
+           AND ($4 = '' OR (REPLACE(to_char(pct, 'FM0000.0000'), '.', '') ILIKE '%' || $4 || '%' OR description ILIKE '%' || $4 || '%'))
+           AND ($5::text[] IS NULL OR (description ~* ANY($6::text[]) OR UPPER(description) ILIKE ANY($5::text[])))
+       )
+       SELECT
+         s.id,
+         s.importer AS company,
+         s.ntn,
+         s.email,
+         s.phone,
+         s.address,
+         s.website,
+         s.origin AS country,
+         s.exporter AS counterparty,
+         s.pct,
+         s.qty,
+         s.unit,
+         s.description,
+         COALESCE(s.value_pkr, 0)::float8 AS value_pkr,
+         s.date AS shipment_date
+       FROM export_shipments s, product_bounds pb
+       WHERE s.importer IS NOT NULL
+         AND ($1 = '' OR s.importer ILIKE '%' || $1 || '%')
+         AND ($2 = '' OR s.description ILIKE '%' || $2 || '%')
+         AND ($3 = '' OR s.origin = $3)
+         AND ($4 = '' OR (REPLACE(to_char(s.pct, 'FM0000.0000'), '.', '') ILIKE '%' || $4 || '%' OR s.description ILIKE '%' || $4 || '%'))
+         AND ($5::text[] IS NULL OR (s.description ~* ANY($6::text[]) OR UPPER(s.description) ILIKE ANY($5::text[])))
+         AND ($9::int IS NULL OR (pb.latest_record_date IS NOT NULL AND s.date >= pb.latest_record_date - ($9 || ' month')::INTERVAL AND s.date <= pb.latest_record_date))
        ${orderClause}
        LIMIT $7 OFFSET $8`,
       [company, product, destination_country, hs_code, proKeywordSearch, proRegexSearch, actualLimit, offset, dataAccessMonths]
