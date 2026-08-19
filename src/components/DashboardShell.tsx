@@ -124,6 +124,7 @@ export default function DashboardShell({
         { href: "/dashboard/admin/users", label: "Users", icon: "Users" },
         { href: "/dashboard/admin/subscriptions", label: "Subscriptions", icon: "CreditCard" },
         { href: "/dashboard/admin/statements", label: "Bank Statements", icon: "FileText" },
+        { href: "/dashboard/admin/invoices", label: "Invoice Generator", icon: "Calculator" },
       ],
     });
     navigation.push({
