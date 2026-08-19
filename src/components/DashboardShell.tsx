@@ -111,7 +111,7 @@ export default function DashboardShell({
         { href: "/dashboard/find-buyer", label: "Find Buyers", icon: "Buyers" },
         { href: "/dashboard/find-supplier", label: "Find Suppliers", icon: "Suppliers" },
         { href: "/dashboard/hs-code-search", label: "HS Codes", icon: "Search" },
-        { href: "/dashboard/check-tariff", label: "Tariffs", icon: "Calculator" },
+        ...(user.role === 'admin' ? [{ href: "/dashboard/calculators", label: "Calculators", icon: "Calculator" as any }] : []),
       ],
     },
   ];
