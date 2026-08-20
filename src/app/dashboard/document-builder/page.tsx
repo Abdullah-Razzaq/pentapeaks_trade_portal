@@ -34,7 +34,7 @@ export default function InvoiceGenerator() {
   const [currency, setCurrency] = useState("USD");
   const [docType, setDocType] = useState<"Commercial Invoice" | "Proforma Invoice" | "Quotation" | "Packing List">("Commercial Invoice");
 
-  const [user, setUser] = useState<{ role?: string; planType?: string } | null>(null);
+  const [user, setUser] = useState<{ role?: string; plan_type?: string } | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
 
   useEffect(() => {
@@ -207,7 +207,7 @@ export default function InvoiceGenerator() {
 
   if (loadingUser) return null;
 
-  if (user?.role !== 'admin' && user?.planType !== 'pro' && user?.planType !== 'premium') {
+  if (user?.role !== 'admin' && user?.plan_type !== 'pro' && user?.plan_type !== 'premium') {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
         <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-6">

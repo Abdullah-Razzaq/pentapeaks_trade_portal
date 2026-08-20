@@ -60,7 +60,7 @@ const COUNTRIES = [
 export default function InquiriesPage() {
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [user, setUser] = useState<{ role?: string; planType?: string } | null>(null);
+  const [user, setUser] = useState<{ role?: string; plan_type?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -154,7 +154,7 @@ export default function InquiriesPage() {
     );
   }
 
-  if (user?.role !== 'admin' && user?.planType !== 'pro' && user?.planType !== 'premium') {
+  if (user?.role !== 'admin' && user?.plan_type !== 'pro' && user?.plan_type !== 'premium') {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
         <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-6">
