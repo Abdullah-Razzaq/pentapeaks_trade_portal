@@ -22,6 +22,7 @@ export async function GET() {
             COALESCE(SUM(p.amount), 0) as total_paid
      FROM users u
      LEFT JOIN payments p ON u.id = p.user_id AND p.status = 'completed'
+     WHERE u.role != 'admin'
      GROUP BY u.id
      ORDER BY u.created_at DESC`
   );

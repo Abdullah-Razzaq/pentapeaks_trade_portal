@@ -111,7 +111,8 @@ export default function DashboardShell({
         { href: "/dashboard/find-buyer", label: "Find Buyers", icon: "Buyers" },
         { href: "/dashboard/find-supplier", label: "Find Suppliers", icon: "Suppliers" },
         { href: "/dashboard/hs-code-search", label: "HS Codes", icon: "Search" },
-        ...(user.role === 'admin' ? [{ href: "/dashboard/calculators", label: "Calculators", icon: "Calculator" as any }] : []),
+        ...(user.role === 'admin' ? [{ href: "/dashboard/calculators", label: "Calculators", icon: "Calculator" as keyof typeof Icons }] : []),
+        ...(user.role === 'admin' || user.planType === 'pro' || user.planType === 'premium' ? [{ href: "/dashboard/document-builder", label: "Document Builder", icon: "FileText" as keyof typeof Icons }] : []),
       ],
     },
   ];
@@ -125,6 +126,7 @@ export default function DashboardShell({
         { href: "/dashboard/admin/subscriptions", label: "Subscriptions", icon: "CreditCard" },
         { href: "/dashboard/admin/statements", label: "Bank Statements", icon: "FileText" },
         { href: "/dashboard/admin/invoices", label: "Invoice Generator", icon: "Calculator" },
+        { href: "/dashboard/admin/invoices/records", label: "Invoice Records", icon: "FileText" },
       ],
     });
     navigation.push({

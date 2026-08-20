@@ -48,29 +48,29 @@ export default function InvoiceGenerator() {
     blNo: ""
   });
 
-  // Parties
-  const [seller] = useState({
-    name: "Pentapeaks International (Private) Limited",
+  const [seller, setSeller] = useState({
+    name: "",
     logoUrl: "",
-    taxId: "NTN: 5652348-8",
-    address: "House	#	3,	Block	K2,	Phase	1,	WAPDA	Town, Lahore, Pakistan",
-    phone: "+92 3086222283",
-    email: "info@pentapeaks.com",
-    bankDetails: "Bank: Standard Chartered\nIBAN: PK35SCBL00001234567890\nSWIFT: SCBLPKKA"
+    signatureUrl: "",
+    taxId: "",
+    address: "",
+    phone: "",
+    email: "",
+    bankDetails: ""
   });
 
   const [buyer, setBuyer] = useState({
-    name: "Global Trade LLC",
+    name: "",
     country: "",
-    taxId: "VAT: 100234567890",
-    address: "Dubai Investment Park, PO Box 12345, Dubai",
-    contact: "+97455818167",
-    email: "buyer@email.com"
+    taxId: "",
+    address: "",
+    contact: "",
+    email: ""
   });
 
   // Line Items
   const [items, setItems] = useState([
-    { id: 1, itemCode: "01219", description: "Premium Himalayan Pink Salt", hsCode: "2501.0010", packSize: 0.90, quantity: 20, unit: "MT", unitPrice: 150, peBagWeight: 0.05, cartonWeight: 0.56, packetsPerCarton: 10, productionDate: "25-11-25", bestBeforeDate: "25-11-26", cartons: 322, packets: 3220 }
+    { id: 1, itemCode: "001", description: "Example Product", hsCode: "0000.0000", packSize: 1, quantity: 10, unit: "PCS", unitPrice: 100, peBagWeight: 0, cartonWeight: 0, packetsPerCarton: 0, productionDate: "", bestBeforeDate: "", cartons: 0, packets: 0 }
   ]);
 
   // Pricing Modifiers
@@ -137,7 +137,27 @@ export default function InvoiceGenerator() {
   };
 
 
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSeller(prev => ({ ...prev, logoUrl: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
+  const handleSignatureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSeller(prev => ({ ...prev, signatureUrl: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const addItem = () => {
     setItems([...items, { id: Date.now(), itemCode: "", description: "", hsCode: "", packSize: 0, quantity: 1, unit: "MT", unitPrice: 0, peBagWeight: 0, cartonWeight: 0, packetsPerCarton: 0, productionDate: "", bestBeforeDate: "", cartons: 0, packets: 0 }]);
@@ -151,21 +171,7 @@ export default function InvoiceGenerator() {
     setItems(items.map(item => item.id === id ? { ...item, [field]: value } : item));
   };
 
-  const exportPDF = async () => {
-    try {
-      await fetch('/api/admin/invoices/record', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          invoice_no: logistics.invoiceNo,
-          buyer_name: buyer.name,
-          doc_type: docType,
-          total_value: totals.grandTotal
-        })
-      });
-    } catch (e) {
-      console.error("Failed to record invoice", e);
-    }
+  const exportPDF = () => {
     window.print();
   };
 
@@ -304,8 +310,31 @@ export default function InvoiceGenerator() {
 
             {/* Buyer & Seller */}
             <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-              <h3 className="font-semibold text-gray-800 flex items-center gap-2 mb-4"><Building2 size={18} className="text-gray-500" /> Buyer Details</h3>
+              <h3 className="font-semibold text-gray-800 flex items-center gap-2 mb-4"><Building2 size={18} className="text-gray-500" /> Party Details</h3>
               <div className="space-y-4">
+                <div className="p-3 bg-gray-50 border border-gray-100 rounded-xl">
+                  <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-2">Seller</span>
+                  <div className="mb-1">
+                    <input placeholder="Company Name" className="w-full text-sm bg-transparent font-medium outline-none border-b border-gray-200" value={seller.name} onChange={e => setSeller({ ...seller, name: e.target.value })} />
+                  </div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <label className="text-xs text-gray-500 whitespace-nowrap">Custom Logo:</label>
+                    <input type="file" accept="image/*" className="text-xs w-full text-gray-600 bg-transparent outline-none" onChange={handleLogoUpload} />
+                  </div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <label className="text-xs text-gray-500 whitespace-nowrap">Signature Stamp:</label>
+                    <input type="file" accept="image/*" className="text-xs w-full text-gray-600 bg-transparent outline-none" onChange={handleSignatureUpload} />
+                  </div>
+                  <input placeholder="Tax ID / NTN" className="w-full text-xs text-gray-600 bg-transparent outline-none mb-1" value={seller.taxId} onChange={e => setSeller({ ...seller, taxId: e.target.value })} />
+                  <div className="flex gap-2 mb-1">
+                    <input placeholder="Phone" className="w-1/2 text-xs text-gray-600 bg-transparent outline-none border-b border-gray-200" value={seller.phone} onChange={e => setSeller({ ...seller, phone: e.target.value })} />
+                    <input placeholder="Email" className="w-1/2 text-xs text-gray-600 bg-transparent outline-none border-b border-gray-200" value={seller.email} onChange={e => setSeller({ ...seller, email: e.target.value })} />
+                  </div>
+                  <textarea placeholder="Address" rows={2} className="w-full text-xs text-gray-600 bg-transparent outline-none resize-none" value={seller.address} onChange={e => setSeller({ ...seller, address: e.target.value })} />
+                  {docType === 'Proforma Invoice' && (
+                    <textarea placeholder="Bank Details for Wire Transfer" rows={3} className="w-full text-xs text-gray-600 bg-transparent outline-none resize-none mt-1" value={seller.bankDetails} onChange={e => setSeller({ ...seller, bankDetails: e.target.value })} />
+                  )}
+                </div>
                 <div className="p-3 bg-gray-50 border border-gray-100 rounded-xl">
                   <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-2">Buyer (Consignee)</span>
                   <input placeholder="Company Name" className="w-full text-sm bg-transparent font-medium outline-none mb-1" value={buyer.name} onChange={e => setBuyer({ ...buyer, name: e.target.value })} />
@@ -327,11 +356,11 @@ export default function InvoiceGenerator() {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="text-xs text-gray-500 mb-1 block">Weight per Pallet (kg)</label>
-                      <input type="number" className="w-full text-sm border-b border-gray-200 py-1 outline-none focus:border-blue-500" value={palletConfig.weightPerPallet} onChange={e => setPalletConfig({ ...palletConfig, weightPerPallet: Number(e.target.value) })} />
+                      <input type="number" className="w-full text-sm border-b border-gray-200 py-1 outline-none focus:border-blue-500" value={palletConfig.weightPerPallet} onChange={e => setPalletConfig({...palletConfig, weightPerPallet: Number(e.target.value)})} />
                     </div>
                     <div>
                       <label className="text-xs text-gray-500 mb-1 block">Total Pallets</label>
-                      <input type="number" className="w-full text-sm border-b border-gray-200 py-1 outline-none focus:border-blue-500" value={palletConfig.totalPallets} onChange={e => setPalletConfig({ ...palletConfig, totalPallets: Number(e.target.value) })} />
+                      <input type="number" className="w-full text-sm border-b border-gray-200 py-1 outline-none focus:border-blue-500" value={palletConfig.totalPallets} onChange={e => setPalletConfig({...palletConfig, totalPallets: Number(e.target.value)})} />
                     </div>
                   </div>
                 </div>
@@ -432,13 +461,10 @@ export default function InvoiceGenerator() {
                 {/* Inner Padding container */}
                 <div className="p-[15mm] flex flex-col h-full flex-1">
 
-                  {/* Header */}
                   <div className="flex justify-between items-start mb-4">
-                    <div className="w-64">
-                      {seller.logoUrl ? (
+                    <div className="w-64 h-24 flex items-center justify-start">
+                      {seller.logoUrl && (
                         <img src={seller.logoUrl} alt="Logo" className="max-w-full h-auto max-h-24 object-contain" />
-                      ) : (
-                        <img src="/logo.webp" alt="Pentapeaks Logo" className="max-w-full h-auto max-h-24 object-contain" />
                       )}
                     </div>
                     <div className="text-right flex-1 ml-4 pt-4">
@@ -447,7 +473,7 @@ export default function InvoiceGenerator() {
                   </div>
 
                   <div className="flex justify-between items-center mb-6 relative">
-                    <div className="w-full border-t-[4px] border-[#f26d21] mt-2"></div>
+                    <div className="w-full border-t-[4px] border-blue-600 mt-2"></div>
                   </div>
 
                   {docType === 'Commercial Invoice' || docType === 'Quotation' || docType === 'Proforma Invoice' ? (
@@ -651,9 +677,10 @@ export default function InvoiceGenerator() {
                   <div className="flex justify-end items-end mt-auto pt-4 relative pb-12">
                     <div className="w-72 z-10 text-center">
                       <p className="text-[12px] font-bold text-left">Thanks & Regards,</p>
-                      <div className="flex justify-center items-center h-16 my-1 gap-4 relative">
-                        <img src="/signature ceo.webp" alt="Authorized Signature" className="max-h-full max-w-[60%] object-contain mix-blend-multiply z-10" />
-                        <img src="/stamp.png" alt="Company Stamp" className="max-h-full max-w-[40%] object-contain mix-blend-multiply opacity-90" />
+                      <div className={`flex justify-center items-center my-1 ${seller.signatureUrl ? 'h-16' : 'h-10'}`}>
+                        {seller.signatureUrl && (
+                          <img src={seller.signatureUrl} alt="Authorized Signature" className="max-h-full max-w-full object-contain mix-blend-multiply" />
+                        )}
                       </div>
                       <div className="border-t border-black pt-1">
                         <p className="text-[11px] font-bold">Authorized Signatory & Stamp</p>
@@ -663,11 +690,11 @@ export default function InvoiceGenerator() {
 
                   {/* Footer Section */}
                   <div className="absolute bottom-6 left-[15mm] right-[15mm]">
-                    <div className="w-full h-0.5 bg-gradient-to-r from-[#2d333b] to-[#f26d21] mb-2"></div>
+                    <div className="w-full h-0.5 bg-gradient-to-r from-blue-900 to-blue-500 mb-2"></div>
                     <div className="text-center text-[10px] text-gray-700">
-                      <p className="font-bold text-[11px] text-black mb-1">{seller.name.toUpperCase()}</p>
-                      <p>{seller.address}</p>
-                      <p>Phone: {seller.phone} | Email: {seller.email}</p>
+                      {seller.name && <p className="font-bold text-[11px] text-black mb-1">{seller.name.toUpperCase()}</p>}
+                      {seller.address && <p>{seller.address}</p>}
+                      {(seller.phone || seller.email) && <p>Phone: {seller.phone || '-'} | Email: {seller.email || '-'}</p>}
                     </div>
                   </div>
                 </div>

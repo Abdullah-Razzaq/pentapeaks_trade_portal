@@ -9,7 +9,7 @@ type CalcTab = "import_duty" | "container_cbm" | "export_pricing" | "freight_com
 const num = (val: number | "") => (val === "" ? 0 : Number(val));
 
 export default function TradeCalculatorsSuite() {
-  const [activeTab, setActiveTab] = useState<CalcTab>("import_duty");
+  const [activeTab, setActiveTab] = useState<CalcTab>("export_pricing");
   const [copied, setCopied] = useState(false);
   
   // Auth State
@@ -47,14 +47,27 @@ export default function TradeCalculatorsSuite() {
   const [containerMaxW, setContainerMaxW] = useState<number | "">(28000);
 
   // --- C. Export Pricing State ---
+  const [expCurrency, setExpCurrency] = useState<"PKR" | "USD">("PKR");
+  const [expExchangeRate, setExpExchangeRate] = useState<number | "">(278);
+  const [expUnitType, setExpUnitType] = useState<"Units" | "KG" | "MT">("Units");
+  const [expUnits, setExpUnits] = useState<number | "">("");
+  const [expContainerType, setExpContainerType] = useState<"20'" | "40'" | "40' HC" | "Reefer" | "LCL" | "Other">("20'");
+  const [expContainersCount, setExpContainersCount] = useState<number | "">(1);
+
   const [expCost, setExpCost] = useState<number | "">("");
   const [expPack, setExpPack] = useState<number | "">("");
   const [expInland, setExpInland] = useState<number | "">("");
-  const [expPort, setExpPort] = useState<number | "">("");
+  const [expAllInOne, setExpAllInOne] = useState<number | "">("");
+  const [expWharfage, setExpWharfage] = useState<number | "">("");
+  const [expTentativeCfc, setExpTentativeCfc] = useState<number | "">("");
+  const [expToken, setExpToken] = useState<number | "">("");
+  const [expCustomClearance, setExpCustomClearance] = useState<number | "">("");
+  const [expPsw, setExpPsw] = useState<number | "">("");
+  const [expOtherPort, setExpOtherPort] = useState<number | "">("");
   const [expFreight, setExpFreight] = useState<number | "">("");
   const [expIns, setExpIns] = useState<number | "">("");
   const [expMargin, setExpMargin] = useState<number | "">("");
-  const [expUnits, setExpUnits] = useState<number | "">("");
+  const [expBreakdownStage, setExpBreakdownStage] = useState<"EXW" | "FOB" | "CFR" | "CIF">("CIF");
 
   // --- D. Air vs Sea State ---
   const [frL, setFrL] = useState<number | "">("");
@@ -119,22 +132,29 @@ export default function TradeCalculatorsSuite() {
 
   // C. Export Pricing
   const expResults = useMemo(() => {
-    const exw = num(expCost) + num(expPack);
-    const units = num(expUnits) || 1;
+    const exwPerUnit = num(expCost) + num(expPack);
+    const totalQty = num(expUnits) || 1;
+    const totalContainers = num(expContainersCount) || 1;
     
-    const fob = exw + ((num(expInland) + num(expPort)) / units);
-    const cfr = fob + (num(expFreight) / units);
-    const cif = cfr + (num(expIns) / units);
+    const totalExw = exwPerUnit * totalQty;
+    const totalPortCharges = num(expAllInOne) + num(expWharfage) + num(expTentativeCfc) + num(expToken) + num(expCustomClearance) + num(expPsw) + num(expOtherPort);
+    
+    const fobTotal = totalExw + num(expInland) + totalPortCharges;
+    const cfrTotal = fobTotal + num(expFreight);
+    const cifTotal = cfrTotal + num(expIns);
     
     const margin = num(expMargin);
-    const sellPrice = margin >= 100 ? 0 : cif / (1 - (margin / 100)); // prevent div zero
-    
-    const totalRev = sellPrice * units;
-    const totalCost = cif * units;
-    const profit = totalRev - totalCost;
+    const sellTotal = margin >= 100 ? 0 : cifTotal / (1 - (margin / 100)); // prevent div zero
+    const profitTotal = sellTotal - cifTotal;
 
-    return { exw, fob, cfr, cif, sellPrice, totalRev, totalCost, profit };
-  }, [expCost, expPack, expInland, expPort, expFreight, expIns, expMargin, expUnits]);
+    const perUnit = (val: number) => totalQty > 0 ? val / totalQty : 0;
+    const perContainer = (val: number) => totalContainers > 0 ? val / totalContainers : 0;
+    
+    const exRate = num(expExchangeRate) || 1;
+    const toAltCurrency = (val: number) => expCurrency === "PKR" ? val / exRate : val * exRate;
+
+    return { totalExw, fobTotal, cfrTotal, cifTotal, sellTotal, profitTotal, totalPortCharges, perUnit, perContainer, toAltCurrency };
+  }, [expCost, expPack, expUnits, expContainersCount, expInland, expAllInOne, expWharfage, expTentativeCfc, expToken, expCustomClearance, expPsw, expOtherPort, expFreight, expIns, expMargin, expExchangeRate, expCurrency]);
 
   // D. Freight Compare
   const frResults = useMemo(() => {
@@ -175,7 +195,8 @@ export default function TradeCalculatorsSuite() {
       setCbmLength(""); setCbmWidth(""); setCbmHeight(""); setCbmWeight(""); setCbmCartons("");
     }
     if (activeTab === "export_pricing") {
-      setExpCost(""); setExpPack(""); setExpInland(""); setExpPort(""); setExpFreight(""); setExpIns(""); setExpMargin(""); setExpUnits("");
+      setExpCost(""); setExpPack(""); setExpInland(""); setExpFreight(""); setExpIns(""); setExpMargin(""); setExpUnits("");
+      setExpAllInOne(""); setExpWharfage(""); setExpTentativeCfc(""); setExpToken(""); setExpCustomClearance(""); setExpPsw(""); setExpOtherPort(""); setExpContainersCount(1);
     }
     if (activeTab === "freight_compare") {
       setFrL(""); setFrW(""); setFrH(""); setFrPkg(""); setFrWeight(""); setFrAirRate(""); setFrSeaRate("");
@@ -194,7 +215,7 @@ export default function TradeCalculatorsSuite() {
       text = `CBM Summary:\nTotal Volume: ${cbmResults.totalVol.toFixed(3)} CBM\nTotal Weight: ${cbmResults.totalWt.toFixed(2)} KG\nVolume Utilization: ${cbmResults.volUtil.toFixed(1)}%`;
     }
     if (activeTab === "export_pricing") {
-      text = `Export Pricing:\nFOB Price: ${expResults.fob.toFixed(2)}\nCIF Price: ${expResults.cif.toFixed(2)}\nTarget Sell Price: ${expResults.sellPrice.toFixed(2)}\nTotal Profit: ${expResults.profit.toFixed(2)}`;
+      text = `Export Pricing:\nFOB Price: ${formatMoney(expResults.fobTotal)}\nCIF Price: ${formatMoney(expResults.cifTotal)}\nTarget Sell Price: ${formatMoney(expResults.sellTotal)}\nTotal Profit: ${formatMoney(expResults.profitTotal)}`;
     }
     if (activeTab === "freight_compare") {
       text = `Freight Comparison:\nChargeable Air Weight: ${frResults.chgAir.toFixed(2)} KG\nTotal Air Freight: ${frResults.airCost.toFixed(2)}\nTotal Sea Freight: ${frResults.seaCost.toFixed(2)}`;
@@ -250,9 +271,9 @@ export default function TradeCalculatorsSuite() {
         {/* Tab Navigation */}
         <div className="flex overflow-x-auto gap-2 pb-2 scrollbar-hide">
           {[
+            { id: "export_pricing", label: "Export Pricing", icon: <Percent size={16}/> },
             { id: "import_duty", label: "Import Landed Cost", icon: <DollarSign size={16}/> },
             { id: "container_cbm", label: "Container CBM", icon: <Box size={16}/> },
-            { id: "export_pricing", label: "Export Pricing", icon: <Percent size={16}/> },
             { id: "freight_compare", label: "Air vs Sea Freight", icon: <Plane size={16}/> },
             { id: "currency", label: "Currency Impact", icon: <RefreshCw size={16}/> },
           ].map((tab) => (
@@ -447,64 +468,226 @@ export default function TradeCalculatorsSuite() {
               C. EXPORT PRICING & INCOTERMS
              ========================================= */}
           {activeTab === "export_pricing" && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-              <div className="space-y-5">
-                <div className="border-b pb-2">
-                  <h3 className="text-lg font-bold text-gray-800">Unit & Logistics Inputs</h3>
-                  <p className="text-xs text-gray-500 mt-1">Input your manufacturing and logistics costs to build up your pricing at each Incoterm stage. Set a target margin to calculate your recommended selling price.</p>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              <div className="lg:col-span-7 space-y-6">
+                <div className="border-b pb-4 flex justify-between items-start">
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-800">Unit, Logistics & Container Inputs</h3>
+                    <p className="text-xs text-gray-500 mt-1">Input costs to build your pricing. Toggle between PKR and USD.</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="bg-gray-100 p-1 rounded-lg flex text-sm">
+                      <button onClick={() => setExpCurrency("PKR")} className={`px-3 py-1 rounded-md transition-all ${expCurrency === "PKR" ? "bg-white shadow-sm font-bold text-blue-700" : "text-gray-500"}`}>PKR</button>
+                      <button onClick={() => setExpCurrency("USD")} className={`px-3 py-1 rounded-md transition-all ${expCurrency === "USD" ? "bg-white shadow-sm font-bold text-blue-700" : "text-gray-500"}`}>USD</button>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm bg-gray-50 border border-gray-200 rounded-lg px-2">
+                      <span className="text-gray-500">1 {expCurrency === "PKR" ? "USD" : "PKR"} =</span>
+                      <input type="number" className="w-16 bg-transparent outline-none font-bold text-gray-900" value={expExchangeRate} onChange={(e) => setExpExchangeRate(e.target.value === "" ? "" : Number(e.target.value))} />
+                    </div>
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2">
-                    <label className="text-xs text-gray-500 font-medium mb-1 block">Total Shipment Units</label>
-                    <input type="number" placeholder="1000" value={expUnits} onChange={(e) => setExpUnits(e.target.value === "" ? "" : Number(e.target.value))} className="w-full border border-gray-200 rounded-lg p-2.5 outline-none focus:border-blue-500 bg-gray-50 text-gray-900" />
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Basic Info */}
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-bold text-gray-700 border-b pb-1">Cargo Details</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs text-gray-500 font-medium mb-1 block">Unit Type</label>
+                        <select className="w-full border border-gray-200 rounded-lg p-2.5 outline-none focus:border-blue-500 bg-gray-50 text-gray-900" value={expUnitType} onChange={(e) => setExpUnitType(e.target.value as "Units" | "KG" | "MT")}>
+                          <option value="Units">Units</option>
+                          <option value="KG">KG</option>
+                          <option value="MT">Metric Ton</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 font-medium mb-1 block">Total {expUnitType}</label>
+                        <input type="number" placeholder="1000" value={expUnits} onChange={(e) => setExpUnits(e.target.value === "" ? "" : Number(e.target.value))} className="w-full border border-gray-200 rounded-lg p-2.5 outline-none focus:border-blue-500 bg-gray-50 text-gray-900" />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 font-medium mb-1 block">Container Info</label>
+                        <select className="w-full border border-gray-200 rounded-lg p-2.5 outline-none focus:border-blue-500 bg-gray-50 text-gray-900" value={expContainerType} onChange={(e) => setExpContainerType(e.target.value as "20'" | "40'" | "40' HC" | "Reefer" | "LCL" | "Other")}>
+                          <option value="20'">20&apos; Std</option>
+                          <option value="40'">40&apos; Std</option>
+                          <option value="40' HC">40&apos; HC</option>
+                          <option value="Reefer">Reefer</option>
+                          <option value="LCL">LCL</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 font-medium mb-1 block">No. of Containers</label>
+                        <input type="number" placeholder="1" value={expContainersCount} onChange={(e) => setExpContainersCount(e.target.value === "" ? "" : Number(e.target.value))} className="w-full border border-gray-200 rounded-lg p-2.5 outline-none focus:border-blue-500 bg-gray-50 text-gray-900" />
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium mb-1 block">Ex-Factory Cost (Per Unit)</label>
-                    <input type="number" placeholder="0.00" value={expCost} onChange={(e) => setExpCost(e.target.value === "" ? "" : Number(e.target.value))} className="w-full border border-gray-200 rounded-lg p-2.5 outline-none focus:border-blue-500 bg-gray-50 text-gray-900" />
+
+                  {/* Core Costs */}
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-bold text-gray-700 border-b pb-1">Core Costs</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs text-gray-500 font-medium mb-1 block">Ex-Factory Cost (Per {expUnitType})</label>
+                        <input type="number" placeholder="0.00" value={expCost} onChange={(e) => setExpCost(e.target.value === "" ? "" : Number(e.target.value))} className="w-full border border-gray-200 rounded-lg p-2.5 outline-none focus:border-blue-500 bg-gray-50 text-gray-900" />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 font-medium mb-1 block">Export Packaging (Per {expUnitType})</label>
+                        <input type="number" placeholder="0.00" value={expPack} onChange={(e) => setExpPack(e.target.value === "" ? "" : Number(e.target.value))} className="w-full border border-gray-200 rounded-lg p-2.5 outline-none focus:border-blue-500 bg-gray-50 text-gray-900" />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="text-xs text-gray-500 font-medium mb-1 block">Inland Transport (Total)</label>
+                        <input type="number" placeholder="0.00" value={expInland} onChange={(e) => setExpInland(e.target.value === "" ? "" : Number(e.target.value))} className="w-full border border-gray-200 rounded-lg p-2.5 outline-none focus:border-blue-500 bg-gray-50 text-gray-900" />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="text-xs text-gray-500 font-medium mb-1 block">Sea/Air Freight (Total)</label>
+                        <input type="number" placeholder="0.00" value={expFreight} onChange={(e) => setExpFreight(e.target.value === "" ? "" : Number(e.target.value))} className="w-full border border-gray-200 rounded-lg p-2.5 outline-none focus:border-blue-500 bg-gray-50 text-gray-900" />
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium mb-1 block">Export Packaging (Per Unit)</label>
-                    <input type="number" placeholder="0.00" value={expPack} onChange={(e) => setExpPack(e.target.value === "" ? "" : Number(e.target.value))} className="w-full border border-gray-200 rounded-lg p-2.5 outline-none focus:border-blue-500 bg-gray-50 text-gray-900" />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Port Charges */}
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-bold text-gray-700 border-b pb-1">Port & Custom Charges (Total)</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="col-span-2">
+                        <label className="text-xs text-gray-500 font-medium mb-1 block">All-in-one Exclusive/Inclusive (BL, Seal, LOLO, Telex, etc.)</label>
+                        <input type="number" placeholder="0.00" value={expAllInOne} onChange={(e) => setExpAllInOne(e.target.value === "" ? "" : Number(e.target.value))} className="w-full border border-gray-200 rounded-lg p-2.5 outline-none focus:border-blue-500 bg-gray-50 text-gray-900" />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 font-medium mb-1 block">Wharfage</label>
+                        <input type="number" placeholder="0.00" value={expWharfage} onChange={(e) => setExpWharfage(e.target.value === "" ? "" : Number(e.target.value))} className="w-full border border-gray-200 rounded-lg p-2.5 outline-none focus:border-blue-500 bg-gray-50 text-gray-900" />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 font-medium mb-1 block">Tentative CFC</label>
+                        <input type="number" placeholder="0.00" value={expTentativeCfc} onChange={(e) => setExpTentativeCfc(e.target.value === "" ? "" : Number(e.target.value))} className="w-full border border-gray-200 rounded-lg p-2.5 outline-none focus:border-blue-500 bg-gray-50 text-gray-900" />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 font-medium mb-1 block">Token</label>
+                        <input type="number" placeholder="0.00" value={expToken} onChange={(e) => setExpToken(e.target.value === "" ? "" : Number(e.target.value))} className="w-full border border-gray-200 rounded-lg p-2.5 outline-none focus:border-blue-500 bg-gray-50 text-gray-900" />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 font-medium mb-1 block">Custom Clearance</label>
+                        <input type="number" placeholder="0.00" value={expCustomClearance} onChange={(e) => setExpCustomClearance(e.target.value === "" ? "" : Number(e.target.value))} className="w-full border border-gray-200 rounded-lg p-2.5 outline-none focus:border-blue-500 bg-gray-50 text-gray-900" />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 font-medium mb-1 block">PSW</label>
+                        <input type="number" placeholder="0.00" value={expPsw} onChange={(e) => setExpPsw(e.target.value === "" ? "" : Number(e.target.value))} className="w-full border border-gray-200 rounded-lg p-2.5 outline-none focus:border-blue-500 bg-gray-50 text-gray-900" />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 font-medium mb-1 block">Other Port Charges</label>
+                        <input type="number" placeholder="0.00" value={expOtherPort} onChange={(e) => setExpOtherPort(e.target.value === "" ? "" : Number(e.target.value))} className="w-full border border-gray-200 rounded-lg p-2.5 outline-none focus:border-blue-500 bg-gray-50 text-gray-900" />
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium mb-1 block">Inland Transport (Total)</label>
-                    <input type="number" placeholder="0.00" value={expInland} onChange={(e) => setExpInland(e.target.value === "" ? "" : Number(e.target.value))} className="w-full border border-gray-200 rounded-lg p-2.5 outline-none focus:border-blue-500 bg-gray-50 text-gray-900" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium mb-1 block">Port THC & Clearance (Total)</label>
-                    <input type="number" placeholder="0.00" value={expPort} onChange={(e) => setExpPort(e.target.value === "" ? "" : Number(e.target.value))} className="w-full border border-gray-200 rounded-lg p-2.5 outline-none focus:border-blue-500 bg-gray-50 text-gray-900" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium mb-1 block">Sea/Air Freight (Total)</label>
-                    <input type="number" placeholder="0.00" value={expFreight} onChange={(e) => setExpFreight(e.target.value === "" ? "" : Number(e.target.value))} className="w-full border border-gray-200 rounded-lg p-2.5 outline-none focus:border-blue-500 bg-gray-50 text-gray-900" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 font-medium mb-1 block">Cargo Insurance (Total)</label>
-                    <input type="number" placeholder="0.00" value={expIns} onChange={(e) => setExpIns(e.target.value === "" ? "" : Number(e.target.value))} className="w-full border border-gray-200 rounded-lg p-2.5 outline-none focus:border-blue-500 bg-gray-50 text-gray-900" />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="text-xs text-blue-600 font-bold mb-1 block">Target Profit Margin (%)</label>
-                    <input type="number" placeholder="0" value={expMargin} onChange={(e) => setExpMargin(e.target.value === "" ? "" : Number(e.target.value))} className="w-full border-2 border-blue-200 rounded-lg p-2.5 outline-none focus:border-blue-500 bg-blue-50/50 text-blue-900 font-bold" />
+
+                  {/* Profit & Ins */}
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-bold text-gray-700 border-b pb-1">Margin & Ins</h4>
+                    <div className="grid grid-cols-1 gap-4">
+                      <div>
+                        <label className="text-xs text-gray-500 font-medium mb-1 block">Cargo Insurance (Total)</label>
+                        <input type="number" placeholder="0.00" value={expIns} onChange={(e) => setExpIns(e.target.value === "" ? "" : Number(e.target.value))} className="w-full border border-gray-200 rounded-lg p-2.5 outline-none focus:border-blue-500 bg-gray-50 text-gray-900" />
+                      </div>
+                      <div>
+                        <label className="text-xs text-blue-600 font-bold mb-1 block">Target Profit Margin (%)</label>
+                        <input type="number" placeholder="0" value={expMargin} onChange={(e) => setExpMargin(e.target.value === "" ? "" : Number(e.target.value))} className="w-full border-2 border-blue-200 rounded-lg p-2.5 outline-none focus:border-blue-500 bg-blue-50/50 text-blue-900 font-bold" />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 space-y-4">
-                <h3 className="text-lg font-bold text-gray-800 border-b border-gray-200 pb-2">Unit Price Buildup</h3>
-                <div className="space-y-3 text-sm text-gray-600">
-                  <div className="flex justify-between items-center"><span className="w-24">EXW Price</span> <span className="border-b border-gray-300 border-dotted flex-1 mx-3"></span> <span className="font-bold text-gray-900">{formatMoney(expResults.exw)}</span></div>
-                  <div className="flex justify-between items-center"><span className="w-24">FOB Price</span> <span className="border-b border-gray-300 border-dotted flex-1 mx-3"></span> <span className="font-bold text-gray-900">{formatMoney(expResults.fob)}</span></div>
-                  <div className="flex justify-between items-center"><span className="w-24">CFR Price</span> <span className="border-b border-gray-300 border-dotted flex-1 mx-3"></span> <span className="font-bold text-gray-900">{formatMoney(expResults.cfr)}</span></div>
-                  <div className="flex justify-between items-center"><span className="w-24">CIF Price</span> <span className="border-b border-gray-300 border-dotted flex-1 mx-3"></span> <span className="font-bold text-gray-900">{formatMoney(expResults.cif)}</span></div>
+              <div className="lg:col-span-5 bg-gray-50 p-6 rounded-xl border border-gray-200 flex flex-col">
+                <h3 className="text-lg font-bold text-gray-800 border-b border-gray-200 pb-2 mb-4">Price Buildup Overview</h3>
+                
+                <div className="flex-1 space-y-6">
+                  {/* Totals */}
+                  <div className="space-y-3 text-sm text-gray-600">
+                    <div className="flex justify-between font-bold text-gray-400 text-xs uppercase"><span className="w-20">Stage (Total)</span> <span className="text-right flex-1">{expCurrency}</span> <span className="text-right flex-1">{expCurrency === "PKR" ? "USD" : "PKR"}</span></div>
+                    
+                    <div className="flex justify-between items-center border-b border-gray-100 pb-2">
+                      <span className="w-20 font-medium">EXW</span> 
+                      <span className="font-bold text-gray-900 text-right flex-1">{formatMoney(expResults.totalExw)}</span>
+                      <span className="text-gray-500 text-right flex-1">{formatMoney(expResults.toAltCurrency(expResults.totalExw))}</span>
+                    </div>
+                    <div className="flex justify-between items-center border-b border-gray-100 pb-2">
+                      <span className="w-20 font-medium">FOB</span> 
+                      <span className="font-bold text-gray-900 text-right flex-1">{formatMoney(expResults.fobTotal)}</span>
+                      <span className="text-gray-500 text-right flex-1">{formatMoney(expResults.toAltCurrency(expResults.fobTotal))}</span>
+                    </div>
+                    <div className="flex justify-between items-center border-b border-gray-100 pb-2">
+                      <span className="w-20 font-medium">CFR</span> 
+                      <span className="font-bold text-gray-900 text-right flex-1">{formatMoney(expResults.cfrTotal)}</span>
+                      <span className="text-gray-500 text-right flex-1">{formatMoney(expResults.toAltCurrency(expResults.cfrTotal))}</span>
+                    </div>
+                    <div className="flex justify-between items-center pb-2">
+                      <span className="w-20 font-medium">CIF</span> 
+                      <span className="font-bold text-gray-900 text-right flex-1">{formatMoney(expResults.cifTotal)}</span>
+                      <span className="text-gray-500 text-right flex-1">{formatMoney(expResults.toAltCurrency(expResults.cifTotal))}</span>
+                    </div>
+                  </div>
+
+                  {/* Breakdown Per Unit/Container */}
+                  <div className="bg-white p-4 rounded-lg border border-gray-200 text-sm space-y-3">
+                    <div className="flex justify-between items-center border-b pb-1">
+                      <h4 className="font-bold text-gray-700">Cost Breakdown ({expCurrency})</h4>
+                      <select 
+                        className="text-xs border border-gray-200 rounded p-1 outline-none focus:border-blue-500 bg-gray-50 text-gray-900"
+                        value={expBreakdownStage}
+                        onChange={(e) => setExpBreakdownStage(e.target.value as "EXW" | "FOB" | "CFR" | "CIF")}
+                      >
+                        <option value="EXW">EXW</option>
+                        <option value="FOB">FOB</option>
+                        <option value="CFR">CFR</option>
+                        <option value="CIF">CIF</option>
+                      </select>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Per {expUnitType} ({expBreakdownStage})</span>
+                      <span className="font-bold">{formatMoney(expResults.perUnit(
+                        expBreakdownStage === "EXW" ? expResults.totalExw :
+                        expBreakdownStage === "FOB" ? expResults.fobTotal :
+                        expBreakdownStage === "CFR" ? expResults.cfrTotal :
+                        expResults.cifTotal
+                      ))}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Per Container ({expBreakdownStage})</span>
+                      <span className="font-bold">{formatMoney(expResults.perContainer(
+                        expBreakdownStage === "EXW" ? expResults.totalExw :
+                        expBreakdownStage === "FOB" ? expResults.fobTotal :
+                        expBreakdownStage === "CFR" ? expResults.cfrTotal :
+                        expResults.cifTotal
+                      ))}</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-gray-400 pt-2 border-t">
+                      <span>Total Port Charges: {formatMoney(expResults.totalPortCharges)}</span>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="mt-6 p-4 bg-[#1e293b] text-white rounded-lg shadow-sm">
-                  <div className="flex justify-between items-center text-gray-300 text-xs uppercase font-bold mb-1">
-                    <span>Target Selling Price (CIF)</span> <span>Net Profit</span>
+                <div className="mt-6 p-5 bg-[#1e293b] text-white rounded-xl shadow-lg">
+                  <div className="flex justify-between items-center text-gray-400 text-xs uppercase font-bold mb-2">
+                    <span>Target Sell Price (Total)</span> 
+                    <span>Total Net Profit</span>
                   </div>
-                  <div className="flex justify-between items-end">
-                    <span className="text-2xl font-black tracking-tight text-emerald-400">{formatMoney(expResults.sellPrice)}</span>
-                    <span className="text-lg font-bold text-white">{formatMoney(expResults.profit)}</span>
+                  <div className="flex justify-between items-end mb-2">
+                    <span className="text-2xl font-black tracking-tight text-emerald-400">
+                      <span className="text-sm font-normal text-gray-400 mr-1">{expCurrency}</span>
+                      {formatMoney(expResults.sellTotal)}
+                    </span>
+                    <span className="text-xl font-bold text-white">{formatMoney(expResults.profitTotal)}</span>
+                  </div>
+                  
+                  {/* Alt Currency */}
+                  <div className="flex justify-between items-end pt-3 border-t border-slate-700/50">
+                    <span className="text-sm font-bold text-emerald-500/70">
+                      <span className="text-xs font-normal text-gray-500 mr-1">{expCurrency === "PKR" ? "USD" : "PKR"}</span>
+                      {formatMoney(expResults.toAltCurrency(expResults.sellTotal))}
+                    </span>
+                    <span className="text-sm font-medium text-gray-400">{formatMoney(expResults.toAltCurrency(expResults.profitTotal))}</span>
                   </div>
                 </div>
               </div>
