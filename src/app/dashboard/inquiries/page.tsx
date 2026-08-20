@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { Lock } from "lucide-react";
 
 type Inquiry = {
   id: number;
@@ -59,6 +60,7 @@ const COUNTRIES = [
 export default function InquiriesPage() {
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [user, setUser] = useState<{ role?: string; planType?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -82,6 +84,7 @@ export default function InquiriesPage() {
     fetch("/api/auth/me")
       .then((res) => res.json())
       .then((data) => {
+        setUser(data?.user);
         setIsAdmin(data?.user?.role === "admin");
         fetchInquiries();
       })
@@ -147,6 +150,23 @@ export default function InquiriesPage() {
     return (
       <div className="flex h-64 items-center justify-center">
         <div className="text-gray-500">Loading inquiries...</div>
+      </div>
+    );
+  }
+
+  if (user?.role !== 'admin' && user?.planType !== 'pro' && user?.planType !== 'premium') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
+        <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-6">
+          <Lock className="w-8 h-8 text-amber-600"/>
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-3">Premium Feature Only</h2>
+        <p className="text-gray-600 max-w-md mb-8">
+          The Trade Inquiries directory is available exclusively to Pro and Premium subscribers.
+        </p>
+        <button className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl transition-colors shadow-sm">
+          Upgrade to Pro to unlock
+        </button>
       </div>
     );
   }

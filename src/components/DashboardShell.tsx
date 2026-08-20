@@ -111,8 +111,8 @@ export default function DashboardShell({
         { href: "/dashboard/find-buyer", label: "Find Buyers", icon: "Buyers" },
         { href: "/dashboard/find-supplier", label: "Find Suppliers", icon: "Suppliers" },
         { href: "/dashboard/hs-code-search", label: "HS Codes", icon: "Search" },
-        ...(user.role === 'admin' ? [{ href: "/dashboard/calculators", label: "Calculators", icon: "Calculator" as keyof typeof Icons }] : []),
-        ...(user.role === 'admin' || user.planType === 'pro' || user.planType === 'premium' ? [{ href: "/dashboard/document-builder", label: "Document Builder", icon: "FileText" as keyof typeof Icons }] : []),
+        { href: "/dashboard/calculators", label: "Calculators", icon: "Calculator" },
+        { href: "/dashboard/document-builder", label: "Document Builder", icon: "FileText" },
       ],
     },
   ];
@@ -136,13 +136,10 @@ export default function DashboardShell({
       ],
     });
   } else {
-    // For regular users, inquiries might just be in MAIN or somewhere else, but currently it was top level.
-    // Let's add it under Management.
-    navigation.push({
-      title: "MANAGEMENT",
-      items: [
-        { href: "/dashboard/inquiries", label: "Inquiries", icon: "Inbox" },
-      ],
+    navigation[1].items.push({
+      href: "/dashboard/inquiries", 
+      label: "Inquiries", 
+      icon: "Inbox" 
     });
   }
 

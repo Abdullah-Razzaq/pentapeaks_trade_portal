@@ -13,7 +13,7 @@ export default function TradeCalculatorsSuite() {
   const [copied, setCopied] = useState(false);
   
   // Auth State
-  const [user, setUser] = useState<{ role?: string } | null>(null);
+  const [user, setUser] = useState<{ role?: string; planType?: string } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -234,16 +234,19 @@ export default function TradeCalculatorsSuite() {
 
   if (loading) return null;
 
-  if (user?.role !== 'admin') {
+  if (user?.role !== 'admin' && user?.planType !== 'pro' && user?.planType !== 'premium') {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
-        <div className="w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center mb-4">
-          <Lock className="w-6 h-6 text-amber-600"/>
+        <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-6">
+          <Lock className="w-8 h-8 text-amber-600"/>
         </div>
-        <h2 className="text-xl font-bold text-gray-900 mb-2">Admin Feature Only</h2>
-        <p className="text-sm text-gray-500 max-w-md">
-          The Trade Calculators Suite is currently available exclusively to system administrators during rollout.
+        <h2 className="text-2xl font-bold text-gray-900 mb-3">Premium Feature Only</h2>
+        <p className="text-gray-600 max-w-md mb-8">
+          The Trade Calculators Suite is available exclusively to Pro and Premium subscribers.
         </p>
+        <button className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl transition-colors shadow-sm">
+          Upgrade to Pro to unlock
+        </button>
       </div>
     );
   }

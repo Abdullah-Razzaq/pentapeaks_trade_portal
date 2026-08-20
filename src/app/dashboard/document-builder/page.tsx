@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Plus, Trash2, Download, Calculator, Building2, Anchor, Box } from "lucide-react";
+import { Plus, Trash2, Download, Calculator, Building2, Anchor, Box, Lock } from "lucide-react";
 
 const numberToWords = (num: number): string => {
   if (num === 0) return 'zero';
@@ -33,6 +33,19 @@ export default function InvoiceGenerator() {
   const [tradeTerm, setTradeTerm] = useState<"FOB" | "CFR" | "CIF">("FOB");
   const [currency, setCurrency] = useState("USD");
   const [docType, setDocType] = useState<"Commercial Invoice" | "Proforma Invoice" | "Quotation" | "Packing List">("Commercial Invoice");
+
+  const [user, setUser] = useState<{ role?: string; planType?: string } | null>(null);
+  const [loadingUser, setLoadingUser] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then(res => res.json())
+      .then(data => {
+        setUser(data.user);
+        setLoadingUser(false);
+      })
+      .catch(() => setLoadingUser(false));
+  }, []);
 
   // Trade Logistics
   const [logistics, setLogistics] = useState({
@@ -192,7 +205,24 @@ export default function InvoiceGenerator() {
 
   const showPrices = docType !== "Packing List";
 
+  if (loadingUser) return null;
 
+  if (user?.role !== 'admin' && user?.planType !== 'pro' && user?.planType !== 'premium') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
+        <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-6">
+          <Lock className="w-8 h-8 text-amber-600"/>
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-3">Premium Feature Only</h2>
+        <p className="text-gray-600 max-w-md mb-8">
+          The Document Builder is available exclusively to Pro and Premium subscribers.
+        </p>
+        <button className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl transition-colors shadow-sm">
+          Upgrade to Pro to unlock
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 print:bg-white p-4 md:p-8 print:p-0 text-gray-900 pb-20 print:pb-0">
