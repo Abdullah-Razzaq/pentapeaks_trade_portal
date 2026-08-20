@@ -10,6 +10,9 @@ if (!connectionString) {
 const pool = new Pool({ connectionString, ssl: { rejectUnauthorized: false } });
 
 async function main() {
+  console.log("Deleting all old admin users...");
+  await pool.query("DELETE FROM users WHERE role = 'admin'");
+
   for (let i = 1; i <= 5; i++) {
     const name = process.env[`ADMIN${i}_NAME`];
     const email = process.env[`ADMIN${i}_EMAIL`];
