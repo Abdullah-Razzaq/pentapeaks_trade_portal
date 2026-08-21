@@ -22,10 +22,10 @@ export default async function DashboardPage() {
   const proProducts = rows[0]?.pro_products || [];
   let adminStats = null;
   if (session.role === "admin") {
-    const usersCountRes = await pool.query("SELECT COUNT(*) FROM users");
-    const activeUsersRes = await pool.query("SELECT COUNT(*) FROM users WHERE is_active = true");
-    const proUsersRes = await pool.query("SELECT COUNT(*) FROM users WHERE plan_type = 'pro'");
-    const adminUsersRes = await pool.query("SELECT COUNT(*) FROM users WHERE role = 'admin'");
+    const usersCountRes = await pool.query("SELECT COUNT(*) FROM users WHERE role != 'admin'");
+    const activeUsersRes = await pool.query("SELECT COUNT(*) FROM users WHERE is_active = true AND role != 'admin'");
+    const proUsersRes = await pool.query("SELECT COUNT(*) FROM users WHERE plan_type = 'pro' AND role != 'admin'");
+    const premiumUsersRes = await pool.query("SELECT COUNT(*) FROM users WHERE plan_type = 'premium' AND role != 'admin'");
     const trialUsersRes = await pool.query("SELECT COUNT(*) FROM users WHERE plan_type = 'trial' AND role != 'admin'");
     let tradeRecordsCount = 0;
     try {
@@ -39,7 +39,7 @@ export default async function DashboardPage() {
       totalUsers: usersCountRes.rows[0].count,
       activeUsers: activeUsersRes.rows[0].count,
       proUsers: proUsersRes.rows[0].count,
-      adminUsers: adminUsersRes.rows[0].count,
+      premiumUsers: premiumUsersRes.rows[0].count,
       trialUsers: trialUsersRes.rows[0].count,
       tradeRecords: tradeRecordsCount,
     };
@@ -121,8 +121,8 @@ export default async function DashboardPage() {
                    <span className="text-[#17233D] font-bold">{adminStats?.proUsers}</span>
                  </div>
                  <div className="flex items-center justify-between">
-                   <span className="text-[#64748B] font-medium text-sm">Admins</span>
-                   <span className="text-[#17233D] font-bold">{adminStats?.adminUsers}</span>
+                   <span className="text-[#64748B] font-medium text-sm">Premium Users</span>
+                   <span className="text-[#17233D] font-bold">{adminStats?.premiumUsers}</span>
                  </div>
                  <div className="flex items-center justify-between">
                    <span className="text-[#64748B] font-medium text-sm">Free/Trial Users</span>
