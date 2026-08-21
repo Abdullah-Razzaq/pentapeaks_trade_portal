@@ -234,7 +234,7 @@ export default function TradeCalculatorsSuite() {
 
   if (loading) return null;
 
-  if (user?.role !== 'admin' && user?.plan_type !== 'pro' && user?.plan_type !== 'premium') {
+  if (user?.role !== 'admin' && user?.plan_type !== 'premium') {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
         <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-6">
@@ -242,10 +242,10 @@ export default function TradeCalculatorsSuite() {
         </div>
         <h2 className="text-2xl font-bold text-gray-900 mb-3">Premium Feature Only</h2>
         <p className="text-gray-600 max-w-md mb-8">
-          The Trade Calculators Suite is available exclusively to Pro and Premium subscribers.
+          The Trade Calculators Suite is available exclusively to Premium subscribers.
         </p>
         <button className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl transition-colors shadow-sm">
-          Upgrade to Pro to unlock
+          Upgrade to Premium to unlock
         </button>
       </div>
     );

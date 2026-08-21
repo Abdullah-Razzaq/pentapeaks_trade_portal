@@ -26,7 +26,7 @@ export default async function DashboardPage() {
     const activeUsersRes = await pool.query("SELECT COUNT(*) FROM users WHERE is_active = true");
     const proUsersRes = await pool.query("SELECT COUNT(*) FROM users WHERE plan_type = 'pro'");
     const adminUsersRes = await pool.query("SELECT COUNT(*) FROM users WHERE role = 'admin'");
-    const trialUsersRes = await pool.query("SELECT COUNT(*) FROM users WHERE plan_type = 'trial'");
+    const trialUsersRes = await pool.query("SELECT COUNT(*) FROM users WHERE plan_type = 'trial' AND role != 'admin'");
     let tradeRecordsCount = 0;
     try {
       const tradeRecordsRes = await pool.query("SELECT COUNT(*) AS total_records FROM export_shipments");
@@ -288,7 +288,7 @@ export default async function DashboardPage() {
 
               {/* Check Duty & VAT */}
               <Link
-                href="/dashboard/check-tariff"
+                href="/dashboard/calculators"
                 className="group relative rounded-2xl bg-gradient-to-br from-amber-50/60 to-white border border-amber-200/80 p-6 shadow-sm transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-xl hover:border-amber-400 hover:shadow-amber-500/10 cursor-pointer overflow-hidden flex flex-col h-full"
               >
                 <div className="flex items-center justify-between mb-4">
