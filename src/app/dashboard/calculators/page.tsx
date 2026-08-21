@@ -64,6 +64,7 @@ export default function TradeCalculatorsSuite() {
   const [expCustomClearance, setExpCustomClearance] = useState<number | "">("");
   const [expPsw, setExpPsw] = useState<number | "">("");
   const [expOtherPort, setExpOtherPort] = useState<number | "">("");
+  const [expOtherExpenses, setExpOtherExpenses] = useState<number | "">("");
   const [expFreight, setExpFreight] = useState<number | "">("");
   const [expIns, setExpIns] = useState<number | "">("");
   const [expMargin, setExpMargin] = useState<number | "">("");
@@ -139,12 +140,20 @@ export default function TradeCalculatorsSuite() {
     const totalExw = exwPerUnit * totalQty;
     const totalPortCharges = num(expAllInOne) + num(expWharfage) + num(expTentativeCfc) + num(expToken) + num(expCustomClearance) + num(expPsw) + num(expOtherPort);
     
-    const fobTotal = totalExw + num(expInland) + totalPortCharges;
+    const fobTotal = totalExw + num(expInland) + totalPortCharges + num(expOtherExpenses);
     const cfrTotal = fobTotal + num(expFreight);
     const cifTotal = cfrTotal + num(expIns);
     
     const margin = num(expMargin);
-    const sellTotal = margin >= 100 ? 0 : cifTotal / (1 - (margin / 100)); // prevent div zero
+    const applyMargin = (cost: number) => margin >= 100 ? 0 : cost / (1 - (margin / 100)); // prevent div zero
+    
+    const exwSell = applyMargin(totalExw);
+    const fobSell = applyMargin(fobTotal);
+    const cfrSell = applyMargin(cfrTotal);
+    const cifSell = applyMargin(cifTotal);
+    
+    // Default to CIF for summary if stage not selected, but we will use the selected stage in the UI
+    const sellTotal = applyMargin(cifTotal);
     const profitTotal = sellTotal - cifTotal;
 
     const perUnit = (val: number) => totalQty > 0 ? val / totalQty : 0;
@@ -153,8 +162,8 @@ export default function TradeCalculatorsSuite() {
     const exRate = num(expExchangeRate) || 1;
     const toAltCurrency = (val: number) => expCurrency === "PKR" ? val / exRate : val * exRate;
 
-    return { totalExw, fobTotal, cfrTotal, cifTotal, sellTotal, profitTotal, totalPortCharges, perUnit, perContainer, toAltCurrency };
-  }, [expCost, expPack, expUnits, expContainersCount, expInland, expAllInOne, expWharfage, expTentativeCfc, expToken, expCustomClearance, expPsw, expOtherPort, expFreight, expIns, expMargin, expExchangeRate, expCurrency]);
+    return { totalExw, fobTotal, cfrTotal, cifTotal, exwSell, fobSell, cfrSell, cifSell, sellTotal, profitTotal, totalPortCharges, perUnit, perContainer, toAltCurrency };
+  }, [expCost, expPack, expUnits, expContainersCount, expInland, expAllInOne, expWharfage, expTentativeCfc, expToken, expCustomClearance, expPsw, expOtherPort, expOtherExpenses, expFreight, expIns, expMargin, expExchangeRate, expCurrency]);
 
   // D. Freight Compare
   const frResults = useMemo(() => {
@@ -196,7 +205,7 @@ export default function TradeCalculatorsSuite() {
     }
     if (activeTab === "export_pricing") {
       setExpCost(""); setExpPack(""); setExpInland(""); setExpFreight(""); setExpIns(""); setExpMargin(""); setExpUnits("");
-      setExpAllInOne(""); setExpWharfage(""); setExpTentativeCfc(""); setExpToken(""); setExpCustomClearance(""); setExpPsw(""); setExpOtherPort(""); setExpContainersCount(1);
+      setExpAllInOne(""); setExpWharfage(""); setExpTentativeCfc(""); setExpToken(""); setExpCustomClearance(""); setExpPsw(""); setExpOtherPort(""); setExpOtherExpenses(""); setExpContainersCount(1);
     }
     if (activeTab === "freight_compare") {
       setFrL(""); setFrW(""); setFrH(""); setFrPkg(""); setFrWeight(""); setFrAirRate(""); setFrSeaRate("");
@@ -582,6 +591,10 @@ export default function TradeCalculatorsSuite() {
                         <label className="text-xs text-gray-500 font-medium mb-1 block">Other Port Charges</label>
                         <input type="number" placeholder="0.00" value={expOtherPort} onChange={(e) => setExpOtherPort(e.target.value === "" ? "" : Number(e.target.value))} className="w-full border border-gray-200 rounded-lg p-2.5 outline-none focus:border-blue-500 bg-gray-50 text-gray-900" />
                       </div>
+                      <div className="col-span-2">
+                        <label className="text-xs text-gray-500 font-medium mb-1 block">Other Expenses (Misc)</label>
+                        <input type="number" placeholder="0.00" value={expOtherExpenses} onChange={(e) => setExpOtherExpenses(e.target.value === "" ? "" : Number(e.target.value))} className="w-full border border-gray-200 rounded-lg p-2.5 outline-none focus:border-blue-500 bg-gray-50 text-gray-900" />
+                      </div>
                     </div>
                   </div>
 
@@ -673,24 +686,54 @@ export default function TradeCalculatorsSuite() {
 
                 <div className="mt-6 p-5 bg-[#1e293b] text-white rounded-xl shadow-lg">
                   <div className="flex justify-between items-center text-gray-400 text-xs uppercase font-bold mb-2">
-                    <span>Target Sell Price (Total)</span> 
-                    <span>Total Net Profit</span>
+                    <span>Target Sell Price ({expBreakdownStage})</span> 
+                    <span>Total Net Profit ({expBreakdownStage})</span>
                   </div>
                   <div className="flex justify-between items-end mb-2">
                     <span className="text-2xl font-black tracking-tight text-emerald-400">
                       <span className="text-sm font-normal text-gray-400 mr-1">{expCurrency}</span>
-                      {formatMoney(expResults.sellTotal)}
+                      {formatMoney(
+                        expBreakdownStage === "EXW" ? expResults.exwSell :
+                        expBreakdownStage === "FOB" ? expResults.fobSell :
+                        expBreakdownStage === "CFR" ? expResults.cfrSell :
+                        expResults.cifSell
+                      )}
                     </span>
-                    <span className="text-xl font-bold text-white">{formatMoney(expResults.profitTotal)}</span>
+                    <span className="text-xl font-bold text-white">
+                      {formatMoney(
+                        (expBreakdownStage === "EXW" ? expResults.exwSell :
+                        expBreakdownStage === "FOB" ? expResults.fobSell :
+                        expBreakdownStage === "CFR" ? expResults.cfrSell :
+                        expResults.cifSell) - 
+                        (expBreakdownStage === "EXW" ? expResults.totalExw :
+                        expBreakdownStage === "FOB" ? expResults.fobTotal :
+                        expBreakdownStage === "CFR" ? expResults.cfrTotal :
+                        expResults.cifTotal)
+                      )}
+                    </span>
                   </div>
                   
                   {/* Alt Currency */}
                   <div className="flex justify-between items-end pt-3 border-t border-slate-700/50">
                     <span className="text-sm font-bold text-emerald-500/70">
                       <span className="text-xs font-normal text-gray-500 mr-1">{expCurrency === "PKR" ? "USD" : "PKR"}</span>
-                      {formatMoney(expResults.toAltCurrency(expResults.sellTotal))}
+                      {formatMoney(expResults.toAltCurrency(
+                        expBreakdownStage === "EXW" ? expResults.exwSell :
+                        expBreakdownStage === "FOB" ? expResults.fobSell :
+                        expBreakdownStage === "CFR" ? expResults.cfrSell :
+                        expResults.cifSell
+                      ))}
                     </span>
-                    <span className="text-sm font-medium text-gray-400">{formatMoney(expResults.toAltCurrency(expResults.profitTotal))}</span>
+                    <span className="text-sm font-medium text-gray-400">{formatMoney(expResults.toAltCurrency(
+                        (expBreakdownStage === "EXW" ? expResults.exwSell :
+                        expBreakdownStage === "FOB" ? expResults.fobSell :
+                        expBreakdownStage === "CFR" ? expResults.cfrSell :
+                        expResults.cifSell) - 
+                        (expBreakdownStage === "EXW" ? expResults.totalExw :
+                        expBreakdownStage === "FOB" ? expResults.fobTotal :
+                        expBreakdownStage === "CFR" ? expResults.cfrTotal :
+                        expResults.cifTotal)
+                    ))}</span>
                   </div>
                 </div>
               </div>

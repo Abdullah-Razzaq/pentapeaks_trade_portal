@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { Plus, Trash2, Download, Calculator, Building2, Anchor, Box } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 
 const numberToWords = (num: number): string => {
   if (num === 0) return 'zero';
@@ -87,18 +88,38 @@ export default function InvoiceGenerator() {
   });
 
   const invoiceRef = useRef<HTMLDivElement>(null);
+  const searchParams = useSearchParams();
+  const recordId = searchParams.get('record_id');
 
   // Initialize randomized/date-based fields after mount to prevent hydration mismatch
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setLogistics(prev => ({
-        ...prev,
-        invoiceNo: `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
-        date: new Date().toISOString().split("T")[0]
-      }));
-    }, 0);
-    return () => clearTimeout(timer);
-  }, []);
+    if (recordId) {
+      fetch(`/api/admin/invoices/record?id=${recordId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.record && data.record.invoice_data) {
+            const d = data.record.invoice_data;
+            setTradeTerm(d.tradeTerm || "FOB");
+            setCurrency(d.currency || "USD");
+            setDocType(d.docType || "Commercial Invoice");
+            setLogistics(prev => d.logistics || prev);
+            setBuyer(prev => d.buyer || prev);
+            setItems(prev => d.items || prev);
+            setPalletConfig(prev => d.palletConfig || prev);
+          }
+        })
+        .catch(console.error);
+    } else {
+      const timer = setTimeout(() => {
+        setLogistics(prev => ({
+          ...prev,
+          invoiceNo: `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+          date: new Date().toISOString().split("T")[0]
+        }));
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [recordId]);
 
 
 
@@ -153,16 +174,19 @@ export default function InvoiceGenerator() {
 
   const exportPDF = async () => {
     try {
-      await fetch('/api/admin/invoices/record', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          invoice_no: logistics.invoiceNo,
-          buyer_name: buyer.name,
-          doc_type: docType,
-          total_value: totals.grandTotal
-        })
-      });
+      if (!recordId) {
+        await fetch('/api/admin/invoices/record', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            invoice_no: logistics.invoiceNo,
+            buyer_name: buyer.name,
+            doc_type: docType,
+            total_value: totals.grandTotal,
+            invoice_data: { tradeTerm, currency, docType, logistics, buyer, items, palletConfig }
+          })
+        });
+      }
     } catch (e) {
       console.error("Failed to record invoice", e);
     }

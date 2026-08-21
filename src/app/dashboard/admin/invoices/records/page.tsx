@@ -63,8 +63,10 @@ export default function InvoiceRecordsPage() {
                 records.map((record) => (
                   <tr key={record.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900 flex items-center gap-2">
-                      <FileText size={16} className="text-blue-500" />
-                      {record.invoice_no}
+                      <a href={`/dashboard/admin/invoices?record_id=${record.id}`} className="flex items-center gap-2 hover:text-blue-600 transition-colors cursor-pointer" title="Open Invoice">
+                        <FileText size={16} className="text-blue-500" />
+                        {record.invoice_no}
+                      </a>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium">
