@@ -4,12 +4,20 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { Lock } from "lucide-react";
 
+type InquiryResponse = {
+  id: number;
+  message: string;
+  user_name: string;
+  created_at: string;
+};
+
 type Inquiry = {
   id: number;
   description: string;
   country_name: string;
   country_code: string;
   created_at: string;
+  responses?: InquiryResponse[];
 };
 
 const COUNTRIES = [
@@ -68,6 +76,10 @@ export default function InquiriesPage() {
   const [countryCode, setCountryCode] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  const [respondingTo, setRespondingTo] = useState<number | null>(null);
+  const [responseMessage, setResponseMessage] = useState("");
+  const [submittingResponse, setSubmittingResponse] = useState(false);
 
   const fetchInquiries = () => {
     fetch("/api/inquiries")
@@ -143,6 +155,30 @@ export default function InquiriesPage() {
     } catch (err) {
       console.error(err);
       alert("Error deleting inquiry.");
+    }
+  };
+
+  const handleRespond = async (inquiryId: number) => {
+    if (!responseMessage.trim()) return;
+    setSubmittingResponse(true);
+    try {
+      const res = await fetch("/api/inquiries/respond", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inquiry_id: inquiryId, message: responseMessage }),
+      });
+      if (res.ok) {
+        alert("Response sent successfully!");
+        setRespondingTo(null);
+        setResponseMessage("");
+      } else {
+        alert("Failed to send response.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error sending response.");
+    } finally {
+      setSubmittingResponse(false);
     }
   };
 
@@ -229,8 +265,63 @@ export default function InquiriesPage() {
                 </div>
                 <p className="text-gray-700 mb-4 text-sm leading-relaxed whitespace-pre-wrap">{inq.description}</p>
               </div>
-              <div className="mt-4 pt-4 border-t border-gray-100 text-[11px] font-medium uppercase tracking-wider text-gray-400">
-                Posted {new Date(inq.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+              
+              {!isAdmin && respondingTo !== inq.id && (
+                <div className="mt-4">
+                  <button 
+                    onClick={() => setRespondingTo(inq.id)}
+                    className="w-full rounded-xl bg-blue-50 py-2 text-sm font-semibold text-blue-600 hover:bg-blue-100 transition-colors"
+                  >
+                    Respond to Inquiry
+                  </button>
+                </div>
+              )}
+
+              {respondingTo === inq.id && (
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <textarea
+                    value={responseMessage}
+                    onChange={(e) => setResponseMessage(e.target.value)}
+                    placeholder="Type your response here..."
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm outline-none focus:border-blue-500 focus:bg-white resize-none h-24 mb-2"
+                  />
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => { setRespondingTo(null); setResponseMessage(""); }}
+                      className="flex-1 rounded-xl bg-gray-100 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-200 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      onClick={() => handleRespond(inq.id)}
+                      disabled={submittingResponse || !responseMessage.trim()}
+                      className="flex-1 rounded-xl bg-blue-600 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
+                    >
+                      {submittingResponse ? "Sending..." : "Send"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {isAdmin && inq.responses && inq.responses.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Responses ({inq.responses.length})</h4>
+                  <div className="space-y-3 max-h-40 overflow-y-auto pr-2 scrollbar-thin">
+                    {inq.responses.map(resp => (
+                      <div key={resp.id} className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-sm font-bold text-gray-900">{resp.user_name}</span>
+                          <span className="text-[10px] text-gray-400">{new Date(resp.created_at).toLocaleDateString()}</span>
+                        </div>
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap">{resp.message}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center text-[11px] font-medium uppercase tracking-wider text-gray-400">
+                <span>Posted {new Date(inq.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
               </div>
             </div>
           ))
