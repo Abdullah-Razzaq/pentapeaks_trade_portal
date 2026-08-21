@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
   }
 
   const hsCode = request.nextUrl.searchParams.get("hs_code")?.trim() ?? request.nextUrl.searchParams.get("chapter")?.trim() ?? "";
+  const country = request.nextUrl.searchParams.get("country")?.trim() ?? "";
   if (!hsCode) {
     return NextResponse.json({ error: "Please select a valid product category." }, { status: 400 });
   }
@@ -64,6 +65,7 @@ export async function GET(request: NextRequest) {
       SELECT s.*
       FROM export_shipments s
       WHERE (s.description ILIKE '%' || $1 || '%' OR REPLACE(to_char(s.pct, 'FM0000.0000'), '.', '') ILIKE '%' || $1 || '%')
+        AND ($2 = '' OR s.origin = $2)
     )
   `
     : `
@@ -72,6 +74,7 @@ export async function GET(request: NextRequest) {
       FROM export_shipments
       WHERE (description ILIKE '%' || $1 || '%' OR REPLACE(to_char(pct, 'FM0000.0000'), '.', '') ILIKE '%' || $1 || '%')
         AND ($3::text[] IS NULL OR (description ~* ANY($4::text[]) OR UPPER(description) ILIKE ANY($3::text[])))
+        AND ($5 = '' OR origin = $5)
       ORDER BY month_start ASC
       LIMIT $2::int
     ),
@@ -81,10 +84,11 @@ export async function GET(request: NextRequest) {
       JOIN distinct_months dm ON DATE_TRUNC('month', s.date) = dm.month_start
       WHERE (s.description ILIKE '%' || $1 || '%' OR REPLACE(to_char(s.pct, 'FM0000.0000'), '.', '') ILIKE '%' || $1 || '%')
         AND ($3::text[] IS NULL OR (s.description ~* ANY($4::text[]) OR UPPER(s.description) ILIKE ANY($3::text[])))
+        AND ($5 = '' OR s.origin = $5)
     )
   `;
 
-  const queryParams = isAdmin ? [hsCode] : [hsCode, dataAccessMonths, proKeywordSearch, proRegexSearch];
+  const queryParams = isAdmin ? [hsCode, country] : [hsCode, dataAccessMonths, proKeywordSearch, proRegexSearch, country];
 
   const [summary, topBuyers, topSuppliers, topCountries] = await Promise.all([
     pool.query(

@@ -234,10 +234,15 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
   useEffect(() => {
     const handle = setTimeout(() => {
       const hsPrefix = product.trim();
+      const countryParam = destinationCountry.trim();
       if (hsPrefix) {
         // setStatusLoading(true); // Replaced by general UI loading if needed
         setStatusError(null);
-        fetch(`/api/trade/product-status?hs_code=${encodeURIComponent(hsPrefix)}`)
+        let url = `/api/trade/product-status?hs_code=${encodeURIComponent(hsPrefix)}`;
+        if (countryParam) {
+          url += `&country=${encodeURIComponent(countryParam)}`;
+        }
+        fetch(url)
           .then(async (res) => {
             if (res.status === 401) {
               router.push("/login");
@@ -264,7 +269,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
       }
     }, 500);
     return () => clearTimeout(handle);
-  }, [product, router]);
+  }, [product, destinationCountry, router]);
 
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
