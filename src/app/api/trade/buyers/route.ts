@@ -66,6 +66,11 @@ export async function GET(request: NextRequest) {
     sort = "date_asc";
   }
 
+  let shipmentDate = request.nextUrl.searchParams.get("date")?.trim() ?? "";
+  if (!isAdmin) {
+    shipmentDate = "";
+  }
+
   if (!isAdmin && planType === "pro" && product) {
     const isAllowed = proProducts.some((p: string) => p.toLowerCase() === product.toLowerCase());
     if (!isAllowed) {
@@ -105,7 +110,8 @@ export async function GET(request: NextRequest) {
          AND ($2 = '' OR s.description ILIKE '%' || $2 || '%')
          AND ($3 = '' OR s.origin = $3)
          AND ($4 = '' OR (REPLACE(to_char(s.pct, 'FM0000.0000'), '.', '') ILIKE '%' || $4 || '%' OR s.description ILIKE '%' || $4 || '%'))
-         AND ($5::text[] IS NULL OR (s.description ~* ANY($6::text[]) OR UPPER(s.description) ILIKE ANY($5::text[])))`
+         AND ($5::text[] IS NULL OR (s.description ~* ANY($6::text[]) OR UPPER(s.description) ILIKE ANY($5::text[])))
+         AND ($7 = '' OR s.date::date = NULLIF($7, '')::date)`
     : `WITH distinct_months AS (
        SELECT DISTINCT DATE_TRUNC('month', date) AS month_start
        FROM export_shipments
@@ -133,7 +139,7 @@ export async function GET(request: NextRequest) {
      FROM allowed_records`;
 
   const countParams = isAdmin
-    ? [company, product, destination_country, hs_code, proKeywordSearch, proRegexSearch]
+    ? [company, product, destination_country, hs_code, proKeywordSearch, proRegexSearch, shipmentDate]
     : [company, product, destination_country, hs_code, proKeywordSearch, proRegexSearch, dataAccessMonths];
   const countResult = await pool.query(countQuery, countParams);
   
@@ -198,6 +204,7 @@ export async function GET(request: NextRequest) {
            AND ($3 = '' OR s.origin = $3)
            AND ($4 = '' OR (REPLACE(to_char(s.pct, 'FM0000.0000'), '.', '') ILIKE '%' || $4 || '%' OR s.description ILIKE '%' || $4 || '%'))
            AND ($5::text[] IS NULL OR (s.description ~* ANY($6::text[]) OR UPPER(s.description) ILIKE ANY($5::text[])))
+           AND ($9 = '' OR s.date::date = NULLIF($9, '')::date)
          ${orderClause}
          LIMIT $7 OFFSET $8`
       : `WITH distinct_months AS (
@@ -244,7 +251,7 @@ export async function GET(request: NextRequest) {
          LIMIT $7 OFFSET $8`;
 
     const dataParams = isAdmin
-      ? [company, product, destination_country, hs_code, proKeywordSearch, proRegexSearch, actualLimit, offset]
+      ? [company, product, destination_country, hs_code, proKeywordSearch, proRegexSearch, actualLimit, offset, shipmentDate]
       : [company, product, destination_country, hs_code, proKeywordSearch, proRegexSearch, actualLimit, offset, dataAccessMonths];
     const { rows: dataRows } = await pool.query(dataQuery, dataParams);
     rows = dataRows;

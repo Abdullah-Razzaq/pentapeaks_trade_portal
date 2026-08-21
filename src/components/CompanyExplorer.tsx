@@ -83,6 +83,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
   const [query, setQuery] = useState(searchParams.get("query") || "");
   const [product, setProduct] = useState(searchParams.get("product") || "");
   const [destinationCountry, setDestinationCountry] = useState(searchParams.get("destinationCountry") || "");
+  const [shipmentDate, setShipmentDate] = useState(searchParams.get("date") || "");
   const [sort, setSort] = useState<SortOrder>((searchParams.get("sort") as SortOrder) || "date_asc");
   const [page, setPage] = useState(parseInt(searchParams.get("page") || "1"));
   const limit = 50;
@@ -126,7 +127,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
   const endpoint = mode === "buyer" ? "/api/trade/buyers" : "/api/trade/suppliers";
 
   const load = useCallback(
-    async (companyTerm: string, productTerm: string, countryTerm: string, hsCodeTerm: string, sortOrder: SortOrder, pageNum: number) => {
+    async (companyTerm: string, productTerm: string, countryTerm: string, hsCodeTerm: string, dateTerm: string, sortOrder: SortOrder, pageNum: number) => {
       setLoading(true);
       setError(null);
       try {
@@ -135,6 +136,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
         if (productTerm) params.set("product", productTerm);
         if (countryTerm) params.set("destination_country", countryTerm);
         if (hsCodeTerm) params.set("hs_code", hsCodeTerm);
+        if (dateTerm) params.set("date", dateTerm);
         params.set("sort", sortOrder);
         params.set("page", pageNum.toString());
         
@@ -169,9 +171,9 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
   );
 
   useEffect(() => {
-    const handle = setTimeout(() => load(query, product, destinationCountry, hsCodeFilter, sort, page), 500);
+    const handle = setTimeout(() => load(query, product, destinationCountry, hsCodeFilter, shipmentDate, sort, page), 500);
     return () => clearTimeout(handle);
-  }, [query, product, destinationCountry, hsCodeFilter, sort, page, load]);
+  }, [query, product, destinationCountry, hsCodeFilter, shipmentDate, sort, page, load]);
 
   // Persist to URL on explicit changes
   const updateUrlParams = useCallback((updates: Partial<{
@@ -181,12 +183,13 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
     sort: string;
     page: number;
     hsCodeFilter: string;
+    date: string;
   }>) => {
     const params = new URLSearchParams(searchParams.toString());
     let changed = false;
 
     const currentValues = {
-      query, product, destinationCountry, sort, page, hsCodeFilter, ...updates
+      query, product, destinationCountry, sort, page, hsCodeFilter, date: shipmentDate, ...updates
     };
 
     const updateParam = (key: string, value: string | number) => {
@@ -213,11 +216,12 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
     updateParam("sort", currentValues.sort);
     updateParam("page", currentValues.page);
     updateParam("hsCodeFilter", currentValues.hsCodeFilter);
+    updateParam("date", currentValues.date);
 
     if (changed) {
       router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     }
-  }, [pathname, router, searchParams, query, product, destinationCountry, sort, page, hsCodeFilter]);
+  }, [pathname, router, searchParams, query, product, destinationCountry, sort, page, hsCodeFilter, shipmentDate]);
 
   // Avoid resetting page in useEffect to prevent cascading renders
   // We'll reset it directly in the input onChange handlers
@@ -293,6 +297,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
         product: product,
         destination_country: destinationCountry,
         hs_code: hsCodeFilter,
+        date: shipmentDate,
         format: format,
         sort: sort,
       });
@@ -751,6 +756,19 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
           <option value="az">Sort: Name (A → Z)</option>
           <option value="za">Sort: Name (Z → A)</option>
         </select>
+        {userRole === "admin" && (
+          <input
+            type="date"
+            value={shipmentDate}
+            onChange={(event) => {
+              setShipmentDate(event.target.value);
+              setPage(1);
+              updateUrlParams({ date: event.target.value, page: 1 });
+            }}
+            title="Filter by specific date"
+            className="w-full sm:w-40 rounded-xl border border-gray-200 shadow-sm px-3 py-2.5 text-sm outline-none transition hover:border-amber-500 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 bg-white/90 backdrop-blur-md text-gray-900"
+          />
+        )}
             
             <button 
               className="mt-6 sm:hidden w-full rounded-xl bg-gray-900 py-3.5 text-sm font-semibold text-white shadow-sm"
