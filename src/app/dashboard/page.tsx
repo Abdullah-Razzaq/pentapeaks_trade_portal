@@ -300,6 +300,21 @@ export default async function DashboardPage() {
                 <h2 className="text-lg font-semibold text-slate-900 mb-2">Check Duty & VAT</h2>
                 <p className="text-sm text-slate-600 flex-1">Calculate tariffs, duties, and VAT rates between countries.</p>
               </Link>
+
+              {/* Document Builder */}
+              <Link
+                href="/dashboard/document-builder"
+                className="group relative rounded-2xl bg-gradient-to-br from-indigo-50/60 to-white border border-indigo-200/80 p-6 shadow-sm transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-xl hover:border-indigo-400 hover:shadow-indigo-500/10 cursor-pointer overflow-hidden flex flex-col h-full sm:col-span-2"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="h-6 w-6"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                  </div>
+                  <span className="text-indigo-500 font-bold transition-transform group-hover:translate-x-1">-&gt;</span>
+                </div>
+                <h2 className="text-lg font-semibold text-slate-900 mb-2">Document Builder</h2>
+                <p className="text-sm text-slate-600 flex-1">Generate professional export-grade documents and invoices instantly.</p>
+              </Link>
             </div>
           </div>
         </div>
