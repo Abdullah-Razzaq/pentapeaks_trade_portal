@@ -18,6 +18,7 @@ type Inquiry = {
   country_code: string;
   created_at: string;
   responses?: InquiryResponse[];
+  has_responded?: boolean;
 };
 
 const COUNTRIES = [
@@ -80,6 +81,7 @@ export default function InquiriesPage() {
   const [respondingTo, setRespondingTo] = useState<number | null>(null);
   const [responseMessage, setResponseMessage] = useState("");
   const [submittingResponse, setSubmittingResponse] = useState(false);
+  const [filterType, setFilterType] = useState<"all" | "responded" | "not_responded">("all");
 
   const fetchInquiries = () => {
     fetch("/api/inquiries")
@@ -171,6 +173,7 @@ export default function InquiriesPage() {
         alert("Response sent successfully!");
         setRespondingTo(null);
         setResponseMessage("");
+        fetchInquiries(); // Refresh to get updated has_responded status
       } else {
         alert("Failed to send response.");
       }
@@ -227,8 +230,33 @@ export default function InquiriesPage() {
         )}
       </div>
 
+      <div className="mb-6 flex gap-2">
+        <button
+          onClick={() => setFilterType("all")}
+          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${filterType === "all" ? "bg-slate-800 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+        >
+          All
+        </button>
+        <button
+          onClick={() => setFilterType("responded")}
+          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${filterType === "responded" ? "bg-emerald-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+        >
+          Responded
+        </button>
+        <button
+          onClick={() => setFilterType("not_responded")}
+          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${filterType === "not_responded" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+        >
+          Not Responded
+        </button>
+      </div>
+
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {inquiries.length === 0 ? (
+        {inquiries.filter((inq) => {
+          if (filterType === "responded") return inq.has_responded;
+          if (filterType === "not_responded") return !inq.has_responded;
+          return true;
+        }).length === 0 ? (
           <div className="col-span-full rounded-2xl border border-gray-200 bg-white p-12 text-center shadow-sm">
             <svg className="mx-auto h-12 w-12 text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -237,7 +265,11 @@ export default function InquiriesPage() {
             <p className="mt-1 text-gray-500">Check back later for new trade opportunities.</p>
           </div>
         ) : (
-          inquiries.map((inq) => (
+          inquiries.filter((inq) => {
+            if (filterType === "responded") return inq.has_responded;
+            if (filterType === "not_responded") return !inq.has_responded;
+            return true;
+          }).map((inq) => (
             <div key={inq.id} className="group relative flex flex-col justify-between rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-1">
               <div>
                 <div className="mb-4 flex items-center justify-between">
@@ -268,12 +300,24 @@ export default function InquiriesPage() {
               
               {!isAdmin && respondingTo !== inq.id && (
                 <div className="mt-4">
-                  <button 
-                    onClick={() => setRespondingTo(inq.id)}
-                    className="w-full rounded-xl bg-blue-50 py-2 text-sm font-semibold text-blue-600 hover:bg-blue-100 transition-colors"
-                  >
-                    Respond to Inquiry
-                  </button>
+                  {inq.has_responded ? (
+                    <button 
+                      disabled
+                      className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 py-2 text-sm font-semibold text-emerald-600 cursor-default"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                      </svg>
+                      Responded
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => setRespondingTo(inq.id)}
+                      className="w-full rounded-xl bg-blue-50 border border-transparent py-2 text-sm font-semibold text-blue-600 hover:bg-blue-100 transition-colors"
+                    >
+                      Respond to Inquiry
+                    </button>
+                  )}
                 </div>
               )}
 

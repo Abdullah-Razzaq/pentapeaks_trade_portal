@@ -43,9 +43,19 @@ export async function GET() {
         responses: responseRows.rows.filter(r => r.inquiry_id === inq.id)
       }));
       return NextResponse.json({ inquiries: inquiriesWithResponses });
+    } else {
+      const userResponses = await pool.query(`
+        SELECT inquiry_id FROM inquiry_responses WHERE user_id = $1
+      `, [session.userId]);
+      
+      const respondedInquiryIds = new Set(userResponses.rows.map(r => r.inquiry_id));
+      
+      const inquiriesWithHasResponded = rows.map(inq => ({
+        ...inq,
+        has_responded: respondedInquiryIds.has(inq.id)
+      }));
+      return NextResponse.json({ inquiries: inquiriesWithHasResponded });
     }
-
-    return NextResponse.json({ inquiries: rows });
   } catch (error) {
     console.error("Error fetching inquiries:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

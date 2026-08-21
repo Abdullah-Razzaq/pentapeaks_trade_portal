@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const session = await getSession();
+  console.log("API /auth/me session:", session);
 
   if (!session) {
     return NextResponse.json({ user: null });

@@ -38,7 +38,7 @@ export default function InvoiceGenerator() {
   const [loadingUser, setLoadingUser] = useState(true);
 
   useEffect(() => {
-    fetch('/api/auth/me')
+    fetch('/api/auth/me', { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         setUser(data.user);

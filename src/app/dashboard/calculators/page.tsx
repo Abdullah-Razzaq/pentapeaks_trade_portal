@@ -17,7 +17,7 @@ export default function TradeCalculatorsSuite() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/auth/me')
+    fetch('/api/auth/me', { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         setUser(data.user);

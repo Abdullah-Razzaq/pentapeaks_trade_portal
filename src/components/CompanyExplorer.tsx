@@ -83,7 +83,8 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
   const [query, setQuery] = useState(searchParams.get("query") || "");
   const [product, setProduct] = useState(searchParams.get("product") || "");
   const [destinationCountry, setDestinationCountry] = useState(searchParams.get("destinationCountry") || "");
-  const [shipmentDate, setShipmentDate] = useState(searchParams.get("date") || "");
+  const [dateFrom, setDateFrom] = useState(searchParams.get("date_from") || "");
+  const [dateTo, setDateTo] = useState(searchParams.get("date_to") || "");
   const [sort, setSort] = useState<SortOrder>((searchParams.get("sort") as SortOrder) || "date_asc");
   const [page, setPage] = useState(parseInt(searchParams.get("page") || "1"));
   const limit = 50;
@@ -127,7 +128,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
   const endpoint = mode === "buyer" ? "/api/trade/buyers" : "/api/trade/suppliers";
 
   const load = useCallback(
-    async (companyTerm: string, productTerm: string, countryTerm: string, hsCodeTerm: string, dateTerm: string, sortOrder: SortOrder, pageNum: number) => {
+    async (companyTerm: string, productTerm: string, countryTerm: string, hsCodeTerm: string, dateFromTerm: string, dateToTerm: string, sortOrder: SortOrder, pageNum: number) => {
       setLoading(true);
       setError(null);
       try {
@@ -136,7 +137,8 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
         if (productTerm) params.set("product", productTerm);
         if (countryTerm) params.set("destination_country", countryTerm);
         if (hsCodeTerm) params.set("hs_code", hsCodeTerm);
-        if (dateTerm) params.set("date", dateTerm);
+        if (dateFromTerm) params.set("date_from", dateFromTerm);
+        if (dateToTerm) params.set("date_to", dateToTerm);
         params.set("sort", sortOrder);
         params.set("page", pageNum.toString());
         
@@ -171,9 +173,9 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
   );
 
   useEffect(() => {
-    const handle = setTimeout(() => load(query, product, destinationCountry, hsCodeFilter, shipmentDate, sort, page), 500);
+    const handle = setTimeout(() => load(query, product, destinationCountry, hsCodeFilter, dateFrom, dateTo, sort, page), 500);
     return () => clearTimeout(handle);
-  }, [query, product, destinationCountry, hsCodeFilter, shipmentDate, sort, page, load]);
+  }, [query, product, destinationCountry, hsCodeFilter, dateFrom, dateTo, sort, page, load]);
 
   // Persist to URL on explicit changes
   const updateUrlParams = useCallback((updates: Partial<{
@@ -183,13 +185,14 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
     sort: string;
     page: number;
     hsCodeFilter: string;
-    date: string;
+    date_from: string;
+    date_to: string;
   }>) => {
     const params = new URLSearchParams(searchParams.toString());
     let changed = false;
 
     const currentValues = {
-      query, product, destinationCountry, sort, page, hsCodeFilter, date: shipmentDate, ...updates
+      query, product, destinationCountry, sort, page, hsCodeFilter, date_from: dateFrom, date_to: dateTo, ...updates
     };
 
     const updateParam = (key: string, value: string | number) => {
@@ -216,12 +219,13 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
     updateParam("sort", currentValues.sort);
     updateParam("page", currentValues.page);
     updateParam("hsCodeFilter", currentValues.hsCodeFilter);
-    updateParam("date", currentValues.date);
+    updateParam("date_from", currentValues.date_from);
+    updateParam("date_to", currentValues.date_to);
 
     if (changed) {
       router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     }
-  }, [pathname, router, searchParams, query, product, destinationCountry, sort, page, hsCodeFilter, shipmentDate]);
+  }, [pathname, router, searchParams, query, product, destinationCountry, sort, page, hsCodeFilter, dateFrom, dateTo]);
 
   // Avoid resetting page in useEffect to prevent cascading renders
   // We'll reset it directly in the input onChange handlers
@@ -297,7 +301,8 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
         product: product,
         destination_country: destinationCountry,
         hs_code: hsCodeFilter,
-        date: shipmentDate,
+        date_from: dateFrom,
+        date_to: dateTo,
         format: format,
         sort: sort,
       });
@@ -637,7 +642,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
         {/* Filters Container (Bottom Sheet on Mobile, Inline on Desktop) */}
         <div className={`
           fixed inset-x-0 bottom-0 z-50 transform transition-transform duration-300 ease-out
-          sm:relative sm:z-auto sm:transform-none sm:transition-none sm:flex sm:flex-row sm:gap-3
+          sm:relative sm:z-auto sm:transform-none sm:transition-none sm:flex sm:flex-col sm:gap-3
           ${isFiltersOpen ? "translate-y-0" : "translate-y-full sm:translate-y-0"}
         `}>
           {/* Backdrop for Mobile */}
@@ -646,7 +651,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
             onClick={() => setIsFiltersOpen(false)}
           />
           
-          <div className="relative bg-white rounded-t-2xl sm:rounded-none sm:bg-transparent p-5 pb-8 sm:p-0 flex flex-col sm:flex-row gap-3 sm:w-full mt-auto max-h-[85vh] overflow-y-auto sm:overflow-visible sm:max-h-none">
+          <div className="relative bg-white rounded-t-2xl sm:rounded-none sm:bg-transparent p-5 pb-8 sm:p-0 flex flex-col gap-3 sm:w-full mt-auto max-h-[85vh] overflow-y-auto sm:overflow-visible sm:max-h-none">
             <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-3 sm:hidden" />
             <div className="flex items-center justify-between sm:hidden mb-4">
               <h3 className="text-lg font-bold text-gray-900">Filters</h3>
@@ -654,6 +659,39 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
+
+            {userRole === "admin" && (
+              <div className="flex flex-col sm:flex-row gap-3 items-end">
+                <div className="flex flex-col w-full sm:w-auto">
+                  <span className="text-[10px] text-gray-500 uppercase font-semibold mb-1 ml-1">Date From</span>
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(event) => {
+                      setDateFrom(event.target.value);
+                      setPage(1);
+                      updateUrlParams({ date_from: event.target.value, page: 1 });
+                    }}
+                    className="w-full sm:w-40 rounded-xl border border-gray-200 shadow-sm px-3 py-2.5 text-sm outline-none transition hover:border-amber-500 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 bg-white/90 backdrop-blur-md text-gray-900"
+                  />
+                </div>
+                <div className="flex flex-col w-full sm:w-auto">
+                  <span className="text-[10px] text-gray-500 uppercase font-semibold mb-1 ml-1">Date To</span>
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={(event) => {
+                      setDateTo(event.target.value);
+                      setPage(1);
+                      updateUrlParams({ date_to: event.target.value, page: 1 });
+                    }}
+                    className="w-full sm:w-40 rounded-xl border border-gray-200 shadow-sm px-3 py-2.5 text-sm outline-none transition hover:border-amber-500 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 bg-white/90 backdrop-blur-md text-gray-900"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-col sm:flex-row gap-3 w-full">
         <div className="relative group w-full sm:w-64">
           <input
             value={query}
@@ -756,19 +794,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
           <option value="az">Sort: Name (A → Z)</option>
           <option value="za">Sort: Name (Z → A)</option>
         </select>
-        {userRole === "admin" && (
-          <input
-            type="date"
-            value={shipmentDate}
-            onChange={(event) => {
-              setShipmentDate(event.target.value);
-              setPage(1);
-              updateUrlParams({ date: event.target.value, page: 1 });
-            }}
-            title="Filter by specific date"
-            className="w-full sm:w-40 rounded-xl border border-gray-200 shadow-sm px-3 py-2.5 text-sm outline-none transition hover:border-amber-500 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 bg-white/90 backdrop-blur-md text-gray-900"
-          />
-        )}
+            </div>
             
             <button 
               className="mt-6 sm:hidden w-full rounded-xl bg-gray-900 py-3.5 text-sm font-semibold text-white shadow-sm"
