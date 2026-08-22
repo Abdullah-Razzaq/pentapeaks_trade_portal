@@ -87,6 +87,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
   const [dateTo, setDateTo] = useState(searchParams.get("date_to") || "");
   const [sort, setSort] = useState<SortOrder>((searchParams.get("sort") as SortOrder) || "date_asc");
   const [page, setPage] = useState(parseInt(searchParams.get("page") || "1"));
+  const [pageInput, setPageInput] = useState(page.toString());
   const limit = 50;
   const isSortingDisabled = planType === "trial" && userRole !== "admin";
   const isCompanyFilterDisabled = planType === "trial" && userRole !== "admin";
@@ -141,6 +142,7 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
         if (dateToTerm) params.set("date_to", dateToTerm);
         params.set("sort", sortOrder);
         params.set("page", pageNum.toString());
+        setPageInput(pageNum.toString());
         
         const res = await fetch(`${endpoint}?${params.toString()}`);
         if (!res.ok) {
@@ -660,36 +662,74 @@ export default function CompanyExplorer({ mode, userRole }: { mode: Mode; userRo
               </button>
             </div>
 
-            {userRole === "admin" && (
-              <div className="flex flex-col sm:flex-row gap-3 items-end">
-                <div className="flex flex-col w-full sm:w-auto">
-                  <span className="text-[10px] text-gray-500 uppercase font-semibold mb-1 ml-1">Date From</span>
-                  <input
-                    type="date"
-                    value={dateFrom}
-                    onChange={(event) => {
-                      setDateFrom(event.target.value);
-                      setPage(1);
-                      updateUrlParams({ date_from: event.target.value, page: 1 });
-                    }}
-                    className="w-full sm:w-40 rounded-xl border border-gray-200 shadow-sm px-3 py-2.5 text-sm outline-none transition hover:border-amber-500 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 bg-white/90 backdrop-blur-md text-gray-900"
-                  />
-                </div>
-                <div className="flex flex-col w-full sm:w-auto">
-                  <span className="text-[10px] text-gray-500 uppercase font-semibold mb-1 ml-1">Date To</span>
-                  <input
-                    type="date"
-                    value={dateTo}
-                    onChange={(event) => {
-                      setDateTo(event.target.value);
-                      setPage(1);
-                      updateUrlParams({ date_to: event.target.value, page: 1 });
-                    }}
-                    className="w-full sm:w-40 rounded-xl border border-gray-200 shadow-sm px-3 py-2.5 text-sm outline-none transition hover:border-amber-500 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 bg-white/90 backdrop-blur-md text-gray-900"
-                  />
-                </div>
+            <div className="flex flex-col sm:flex-row gap-3 items-end">
+              {userRole === "admin" && (
+                <>
+                  <div className="flex flex-col w-full sm:w-auto">
+                    <span className="text-[10px] text-gray-500 uppercase font-semibold mb-1 ml-1">Date From</span>
+                    <input
+                      type="date"
+                      value={dateFrom}
+                      onChange={(event) => {
+                        setDateFrom(event.target.value);
+                        setPage(1);
+                        updateUrlParams({ date_from: event.target.value, page: 1 });
+                      }}
+                      className="w-full sm:w-40 rounded-xl border border-gray-200 shadow-sm px-3 py-2.5 text-sm outline-none transition hover:border-amber-500 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 bg-white/90 backdrop-blur-md text-gray-900"
+                    />
+                  </div>
+                  <div className="flex flex-col w-full sm:w-auto">
+                    <span className="text-[10px] text-gray-500 uppercase font-semibold mb-1 ml-1">Date To</span>
+                    <input
+                      type="date"
+                      value={dateTo}
+                      onChange={(event) => {
+                        setDateTo(event.target.value);
+                        setPage(1);
+                        updateUrlParams({ date_to: event.target.value, page: 1 });
+                      }}
+                      className="w-full sm:w-40 rounded-xl border border-gray-200 shadow-sm px-3 py-2.5 text-sm outline-none transition hover:border-amber-500 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 bg-white/90 backdrop-blur-md text-gray-900"
+                    />
+                  </div>
+                </>
+              )}
+              <div className="flex flex-col w-full sm:w-auto">
+                <span className="text-[10px] text-gray-500 uppercase font-semibold mb-1 ml-1">Go to Page</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={totalPages || 1}
+                  value={pageInput}
+                  onChange={(event) => {
+                    setPageInput(event.target.value);
+                  }}
+                  onBlur={(event) => {
+                    let targetPage = parseInt(event.target.value);
+                    if (isNaN(targetPage) || targetPage < 1) {
+                      setPageInput(page.toString());
+                      return;
+                    }
+                    if (isTrial && targetPage > 20) {
+                      setShowUpgradeBanner(true);
+                      setPageInput(page.toString());
+                      return;
+                    }
+                    if (totalPages && targetPage > totalPages) {
+                      targetPage = totalPages;
+                    }
+                    setPageInput(targetPage.toString());
+                    setPage(targetPage);
+                    updateUrlParams({ page: targetPage });
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.currentTarget.blur();
+                    }
+                  }}
+                  className="w-full sm:w-24 rounded-xl border border-gray-200 shadow-sm px-3 py-2.5 text-sm outline-none transition hover:border-amber-500 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 bg-white/90 backdrop-blur-md text-gray-900"
+                />
               </div>
-            )}
+            </div>
 
             <div className="flex flex-col sm:flex-row gap-3 w-full">
         <div className="relative group w-full sm:w-64">
