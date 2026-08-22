@@ -17,9 +17,9 @@ export const metadata: Metadata = {
   title: 'PentaPeaks International | Trade Intelligence Portal',
   description: 'International Trade & Tariff Intelligence Portal',
   icons: {
-    icon: '/logo.webp',
-    shortcut: '/logo.webp',
-    apple: '/logo.webp',
+    icon: '/favicon.png',
+    shortcut: '/favicon.png',
+    apple: '/favicon.png',
   },
 };
 
